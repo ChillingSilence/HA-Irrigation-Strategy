@@ -25,14 +25,15 @@ log before enabling.
 
 ### 🌱 In plain English
 
-- **A room keeps every zone it was set up with.** The controller worked out how many zones a room
-  has by counting the zone sensors it could see, and asked the room's own record only when it saw
-  none. While Home Assistant is still starting (a host reboot starts both together) those sensors
-  can appear a few at a time, so a three-zone room could come up as a one-zone room, and stay one:
-  zones 2 and 3 left out, not watered and not reported, until the controller was restarted. The
-  room's record now decides. Sensors alone are only a stand-in, checked again every loop until the
-  record arrives. The sensors-first order is as old as zone auto-detection; 0.16.2 rewrote that
-  code and kept it.
+- **A room keeps every zone it was set up with.** Since 0.16.2, a controller that starts before
+  Home Assistant is ready takes a stand-in zone list and checks again every loop. It settled on
+  the first answer it got from counting zone sensors, and while Home Assistant is starting (a host
+  reboot starts both together) those sensors can appear a few at a time: a three-zone room could
+  be settled as a one-zone room, zones 2 and 3 left out, not watered and not reported, until the
+  controller was restarted. A room set up or saved through the wizard got its zones straight back,
+  because adopting its setup restores them; **a room from before setups were numbered did not.**
+  0.16.1 and older never looked again, so they kept the right list. The room's own record now
+  decides, and sensors without a record stay a stand-in.
 - **An update no longer hides a real irrigation time, and an old state file can no longer stop the
   controller starting.** 0.16.2 taught the controller to tell a real irrigation from the moment a
   room was merely switched on. For a state file written before that, it guessed: no water on
@@ -57,10 +58,14 @@ log before enabling.
 
 ### 🔧 Technical notes
 
-- **Zone inventory** (upstream `5125bab`, **C3**). `_default_zone_ids(options, descriptor)` reads the
-  descriptor's `active_zone_ids` / `num_zones` first; then fused sensors, **provisional** unless
-  the operator hand-mapped `options.hardware`, so re-resolved every loop until a descriptor
-  arrives; then as before. The sensor of a retired zone that outlives it no longer adds a zone.
+- **Zone inventory** (upstream `5125bab`, **C3**). A regression from #17: the every-loop
+  re-resolution of a provisional default room accepted a partial fused-sensor count as final. Rooms
+  with `setup_revision` >= 1 had their zones restored by `_apply_setup_descriptors` in the same
+  pass; a revision-zero room stayed shrunk. Reproduced here on 0.17.0 (`[1]`) and on 0.16.1
+  (`[1, 2, 3]`). `_default_zone_ids(options, descriptor)` now reads the descriptor's
+  `active_zone_ids` / `num_zones` first; then fused sensors, **provisional** unless the operator
+  hand-mapped `options.hardware`, so re-resolved every loop until a descriptor arrives; then as
+  before. The sensor of a retired zone that outlives it no longer adds a zone.
 - **Old state files** (same commit, **C3**). `_apply_saved_zone`: a zone saved without
   `last_shot_is_anchor` loads with `False`. The inference from `shots`, `daily_vol`,
   `water_history` and `water_history_legacy_excluded_l` is removed, and with it the raw
@@ -174,8 +179,8 @@ release. Update with the engine off, read the controller log, then watch the fir
 > **On this fork, read this entry together with 2.20.2.** The *switching a room on* and *zones are
 > never invented* items below carry upstream's wording, brought in by the 2.20.2 intake. Upstream's
 > 2.19.2 contains its final-review fixes; **this fork's `v2.19.2` tag does not**. Here the old-file
-> guess and the sensors-first zone count shipped in 2.19.2, 2.20.0 and 2.20.1, and were fixed in
-> 2.20.2 / controller 0.17.1.
+> guess and the zone list that could settle on a half-started Home Assistant shipped in 2.19.2,
+> 2.20.0 and 2.20.1, and were fixed in 2.20.2 / controller 0.17.1.
 
 ### 🌱 In plain English
 
