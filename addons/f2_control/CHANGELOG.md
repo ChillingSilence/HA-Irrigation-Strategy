@@ -1,3 +1,12 @@
+# 0.17.1
+
+Pair with integration 2.20.2. **C3.** Two upgrade fixes written upstream (`5125bab`), found by upstream's final review of 0.16.2's changes. **This fork's 0.16.2 and 0.17.0 do not have them.** Not run on hardware on this fork before release.
+
+- **The room's record decides its zones.** The zone list came from counting fused sensors first, and the descriptor was asked only when there were none. Sensors can appear a few at a time while Home Assistant starts, so a three-zone room could come up with one zone and keep it until the controller restarted. Now the descriptor's `active_zone_ids` / `num_zones` come first; sensors without a descriptor are provisional and re-resolved every loop, unless `hardware` is hand-mapped in the options. The sensor of a retired zone no longer adds a zone.
+- **An old state file keeps the meaning of its timestamps, and always loads.** 0.16.2 guessed, for a file saved without `last_shot_is_anchor`, that no recorded water meant "switched on, never watered". Daily counters reset at lights-on and water history expires, so that hid genuine irrigation times after an update; and its raw comparisons raised on a numeric string or a malformed `water_history_legacy_excluded_l`, which stopped the controller starting. The guess is removed: a zone saved without the flag loads with `False`.
+- The cost: a box updated straight from 0.16.1 or older, switched on and never watered, shows the switch-on as its last irrigation again until the first real one. A file saved by 0.16.2 or 0.17.0 carries the explicit flag and is unaffected.
+- No change to add-on options, to the state file's keys, or to setup adoption: a restart resumes without a disarm cycle.
+
 # 0.17.0
 
 Pair with integration 2.20.1. **C3.** Found on the first real install; the fix itself was not run on hardware before release.
@@ -14,6 +23,7 @@ Pair with integration 2.19.2. **C3.** Found on the first real install (a one-zon
 - **Zones are never invented.** Started before the integration was set up, the controller fell back to the shipped `num_zones: 3` and reported zones 2 and 3 of a one-zone tent as "no hardware mapped". It now has no zones until a room exists, checks every loop, and picks the room up by itself: no restart needed. The log says so: *"the Crop Steering integration has not published a room yet..."*. `num_zones` is still the fallback when Home Assistant cannot be reached at start, and a hand-mapped `hardware` option still keeps its zone count. A state file that already holds the phantom zones loads as before.
 - **Switch-on is no longer an irrigation event.** New switch-on timestamps are explicitly marked by `last_shot_is_anchor` and published as `unknown` until an irrigation is recorded, also for a room that is off. An old file without the flag keeps its timestamp: zero daily counters or missing history cannot establish whether an old timestamp was switch-on or irrigation. Electrical operation alone does not prove water delivery.
 - Final review fixes keep the descriptor's complete zone list when HA sensors appear gradually, preserve old irrigation timestamps after daily rollover, and keep legacy numeric-string/malformed excluded-volume state loadable. Regression tests cover each case.
+- *On this fork* those final review fixes are **not in 0.16.2 or 0.17.0**; they shipped in 0.17.1. The wording of this entry is upstream's, whose 0.16.2 has them.
 - The dashboard served by the app is the 2.19.2 build (the side menu scrolls on small screens).
 - No change to add-on options. No change to what a working install waters, or when.
 
