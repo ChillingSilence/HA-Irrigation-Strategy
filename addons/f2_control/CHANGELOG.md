@@ -1,3 +1,12 @@
+# 0.17.0
+
+Pair with integration 2.20.1. **C3.** Found on the first real install; the fix itself was not run on hardware before release.
+
+- **A room that is deleted in Home Assistant and set up again is a new room.** The controller keeps running across a re-setup, and used to go on driving the room that no longer existed: a re-created room's setup revision starts again at 1, and any revision not higher than the one held was skipped. With a different valve in the new room, arming it would have watered through the old one. The integration (2.20.1) now publishes which room it is (`entry_id` in the descriptor); when that changes, the setup is adopted afresh through the usual gate: the kill switches and the hardware of **both** maps must read OFF, otherwise every zone is held with *setup needs re-arming*.
+- A different room is never *resumed* after a restart, however alike it looks: it was born with its kill switch OFF, so finding it ON is a setup to gate.
+- **Existing rooms: no change, and no disarm cycle after the update.** An integration that does not say which room it is (everything before 2.20.1) is handled exactly as before. The first `entry_id` the controller ever sees is remembered and written down, and changes nothing. A restart on a state file from 0.16.x resumes with the kill switch left ON.
+- State file: `_setup` gains an optional `entry_id`. No change to add-on options. No change to what a working install waters, or when.
+
 # 0.16.2
 
 Pair with integration 2.19.2. **C3.** Found on the first real install (a one-zone tent); the fixes themselves were not run on hardware before release.
