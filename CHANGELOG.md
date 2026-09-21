@@ -9,6 +9,82 @@ notes**, the entity- and code-level detail for developers and AI agents working 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.20.1] - 2026-09-21
+
+Pair: **controller 0.17.0**. Class **C3**. Three changes, each its own pull request with its own
+tests (#25, #26, #27), all from the same evening on the first real install: Home Assistant had
+been running stale code, so the integration was deleted and set up again, twice, and each step of
+that went wrong in its own way. **This candidate carries more than one behaviour change** (one C3,
+two C2), which [docs/RELEASING.md](docs/RELEASING.md) says a candidate should not; they were
+bundled by decision of the person running the only staging room. The failures were seen on a real
+install; **the fixes have not run on hardware** before release. Update with the engine off, and
+**restart Home Assistant after the HACS update**: from this version on, setup tells you if you
+have not.
+
+**There is no 2.20.0.** The tag `v2.20.0` was published by mistake on the commit *before* this
+release was cut: the same code, but still calling itself 2.19.2 / controller 0.16.2, with no
+changelog. A version number is never reused for different code, so that tag stays where it is and
+this release is 2.20.1. If HACS installed 2.20.0 for you, the dashboard and the setup screens say
+2.19.2; update to 2.20.1.
+
+### 🌱 In plain English
+
+- **Setup tells you which version is really running.** HACS downloads an update, but Home
+  Assistant keeps running the old code until it restarts, and until now nothing said so. The
+  first setup screen, the add-a-room screen and the *Configure* menu now show "Running: Crop
+  Steering 2.20.1". And if a different version is sitting on disk waiting for a restart, **setup
+  will not create a room at all**: it stops and says "restart Home Assistant, then add Crop
+  Steering again". A room made by stale code keeps whatever that code created, entity names
+  included, for life; refusing is kinder. *Configure* is never blocked (someone with a growing
+  room has to be able to get in); it shows the same warning instead.
+- **A room you delete and set up again starts fresh.** Home Assistant remembers the last value of
+  a deleted entity for seven days, and this integration always uses the same entity ids, so a
+  second attempt at setup quietly inherited the first: its settings (over the answers you had
+  just typed: lights 07:00-20:00 came back as 12:00-00:00), its room on/off switch, and its
+  **kill switch**. A room deleted while its engine was enabled came back with its engine
+  enabled. Now a room only takes back values that were saved after that room was created. An
+  existing room restarts exactly as it always has.
+- **The controller notices when the room behind it has been replaced.** It kept running while the
+  integration was deleted and set up again, and went on driving the room that no longer existed:
+  the new room's setup counter starts again at 1, and the controller only takes on a setup
+  numbered higher than the one it holds. With a different valve in the new room, enabling it
+  would have watered through the **old** valve. The integration now says which room it is, and
+  when that changes the controller takes the new setup on, through the same safety gate as any
+  setup change: the kill switch and every switch of both the old and the new map must read OFF
+  first.
+
+### 🔧 Technical notes
+
+- **Version in the config flow** (#27, **C2**). `SOFTWARE_VERSION` of the *loaded* module is shown
+  through `description_placeholders` on `config.step.user`, `config.step.room` and
+  `options.step.init`. `_installed_version()` reads `manifest.json` from disk in the executor; when
+  it differs from the running version the flow aborts with the new `config.abort.restart_required`
+  at the top of `async_step_user`, which covers the first room, an additional room and creation
+  through the setup API. An unreadable manifest stops nobody.
+- **A re-created room does not inherit** (#25, **C2**). `room.restored_state_is_ours(entry,
+  last_state)`: `last_state.last_updated >= entry.created_at`, used by the number, switch and
+  select platforms in `async_added_to_hass`. Home Assistant keeps a removed entity's state for
+  `restore_state.STATE_EXPIRATION` (7 days), keyed by entity id. Conservative on purpose: an entry
+  from before Home Assistant recorded `created_at` carries the epoch, and where either time is
+  missing or they cannot be compared, the state **is** restored.
+- **The controller adopts a re-created room** (#26, **C3**). The descriptor gains `entry_id`
+  (additive, and like `integration_version` not one of the keys the setup fingerprint reads).
+  `Controller._is_another_room()` re-opens adoption when it changes and nothing more: the existing
+  gate still applies to both maps. A different room is never *resumed* after a restart, however
+  alike it looks. First sight of an `entry_id` (the integration updated under a running room, or
+  a state file from 0.16.x) is remembered, written down, and changes nothing. `_setup` in the
+  state file gains an optional `entry_id`.
+- **Upgrade in place.** No entity id and no add-on option changes. One optional state-file key and
+  one additive descriptor attribute; a restart on a 0.16.2 state file resumes **without a disarm
+  cycle** (tested, as is the descriptor's fingerprint staying exactly what 0.15.1 computed for
+  the seeded 2.18 tent). Every change is tested on a fresh install and from the seeded snapshots
+  in `tests_ha/fixtures/`.
+- **What these cannot do.** A controller that has never seen an `entry_id` has nothing to compare
+  the first one with, so a re-setup done in the same breath as this update is still missed until
+  the controller restarts. And an install whose *running* code is older than this release has no
+  version on its setup screens: [docs/troubleshooting.md](docs/troubleshooting.md) says what that
+  means (restart first).
+
 ## [2.19.2] - 2026-09-21
 
 Pair: **controller 0.16.2**. Class **C3**. Everything here comes from two reviews by use: the first
