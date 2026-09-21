@@ -817,6 +817,7 @@ class Controller:
             attrs = descriptors.get(room.prefix)
             if not attrs:
                 continue
+            room.zone_names = self._zone_names(attrs)  # display only; a rename needs no adoption
             saved = (getattr(self, "_saved_room_blocks", {}).get(room.slug) or {}).get("_setup")
             another_room = self._is_another_room(room, attrs, saved)
             revision = attrs.get("setup_revision", 0)
@@ -1277,7 +1278,7 @@ class Controller:
             self._alert(
                 f"cfg_{room.slug}_z{zone}_{w.split('=')[0]}",
                 "F2 config clamp",
-                f"{room.slug} zone {zone}: {w}",
+                f"{room.slug} {self._zone_label(room, zone)}: {w}",
             )
         return p
 
@@ -1634,6 +1635,28 @@ class Controller:
         return None
 
     # ---------- alerts / notify ----------
+    @staticmethod
+    def _zone_names(attrs):
+        """The names the operator gave the zones ({2: "GT4"}), from the room's descriptor. A zone
+        still called "Zone N", or a descriptor without names, has none."""
+        names = (attrs or {}).get("zone_names")
+        found = {}
+        for key, name in (names.items() if isinstance(names, dict) else ()):
+            try:
+                zone = int(key)
+            except (TypeError, ValueError):
+                continue
+            if isinstance(name, str) and name.strip() and name.strip() != f"Zone {zone}":
+                found[zone] = name.strip()[:40]
+        return found
+
+    def _zone_label(self, room, zone, short=False):
+        """How a notification names a zone: the operator's name first, the number always there,
+        because the entity ids and the log say zone N. Log lines keep the bare number."""
+        name = getattr(room, "zone_names", {}).get(zone)
+        number = f"Z{zone}" if short else f"zone {zone}"
+        return f"{name} ({number})" if name else number
+
     def _alert(self, key, title, message):
         now = datetime.now()
         last = self._alerted.get(key)
@@ -1910,7 +1933,7 @@ class Controller:
                 self._alert(
                     f"hw_{room.slug}_z{zone}",
                     "Shot aborted — pump command failed",
-                    f"{room.slug} zone {zone}: pump turn_on returned an error. No water delivered, shot NOT counted.",
+                    f"{room.slug} {self._zone_label(room, zone)}: pump turn_on returned an error. No water delivered, shot NOT counted.",
                 )
                 return
             if pump:
@@ -1921,7 +1944,7 @@ class Controller:
                 self._alert(
                     f"hw_{room.slug}_z{zone}",
                     "Shot aborted — mainline command failed",
-                    f"{room.slug} zone {zone}: mainline turn_on failed. Pump cut. No water, shot NOT counted.",
+                    f"{room.slug} {self._zone_label(room, zone)}: mainline turn_on failed. Pump cut. No water, shot NOT counted.",
                 )
                 return
             if mainline:
@@ -1934,7 +1957,7 @@ class Controller:
                 self._alert(
                     f"hw_{room.slug}_z{zone}",
                     "Shot aborted — valve command failed",
-                    f"{room.slug} zone {zone}: valve {valve} turn_on failed. Anything upstream was cut. No water, shot NOT counted.",
+                    f"{room.slug} {self._zone_label(room, zone)}: valve {valve} turn_on failed. Anything upstream was cut. No water, shot NOT counted.",
                 )
                 return
             elapsed, aborted = self._wait_shot(
@@ -1975,7 +1998,7 @@ class Controller:
                 self._alert(
                     f"killshot_{room.slug}_z{zone}",
                     "Shot cut short — kill switch / override",
-                    f"{room.slug} zone {zone}: shot aborted after {elapsed:.0f}/{duration_s:.0f}s "
+                    f"{room.slug} {self._zone_label(room, zone)}: shot aborted after {elapsed:.0f}/{duration_s:.0f}s "
                     "by the kill switch or manual override. Valve closed; partial volume counted.",
                 )
         except Exception as e:
@@ -2091,7 +2114,7 @@ class Controller:
             self._alert(
                 f"wd_{room.slug}_z{zone}",
                 "URGENT — zone starving",
-                f"{room.slug} zone {zone}: no water {snap.minutes_since_shot/60.0:.1f}h, "
+                f"{room.slug} {self._zone_label(room, zone)}: no water {snap.minutes_since_shot/60.0:.1f}h, "
                 f"VWC {snap.vwc:.0f}<{p.p2_threshold:.0f}, blocked by '{block}'.",
             )
         if fire and block:
@@ -2124,7 +2147,7 @@ class Controller:
                 self._alert(
                     f"durcap_{room.slug}_z{zone}",
                     "Shot duration capped (flood guard)",
-                    f"{room.slug} zone {zone}: computed {int(raw_dur)}s > {int(max_dur)}s cap — clamped. Check substrate volume / flow config.",
+                    f"{room.slug} {self._zone_label(room, zone)}: computed {int(raw_dur)}s > {int(max_dur)}s cap — clamped. Check substrate volume / flow config.",
                 )
             log(f"[{room.slug}] Z{zone} {st['phase']} FIRE {size}% ~{dur}s — {reason}")
             # Count configured flow x actual runtime, including caps, truncation,
@@ -2136,7 +2159,7 @@ class Controller:
                 self._alert(
                     f"block_{room.slug}_z{zone}",
                     "Zone blocked — needs attention",
-                    f"{room.slug} zone {zone} ({st['phase']}): {reason}",
+                    f"{room.slug} {self._zone_label(room, zone)} ({st['phase']}): {reason}",
                 )
             # A gate that is closed is said out loud in every phase: overnight nothing is due, and a
             # room blocked since a restart used to look exactly like a healthy one until lights-on.
@@ -2303,7 +2326,7 @@ class Controller:
             if snap.ec is None:
                 self._alert(
                     f"ec_unknown_{room.slug}_z{zone}",
-                    f"{room.slug} Z{zone} EC unavailable — base VWC watering",
+                    f"{room.slug} {self._zone_label(room, zone, short=True)} EC unavailable — base VWC watering",
                     "No valid, fresh pore EC. EC shot scaling and PID/step learning are paused; "
                     "salt protection and flushing cannot be verified. Base VWC watering and "
                     "dry rescue remain active, subject to source-water and volume gates.",
@@ -2386,7 +2409,7 @@ class Controller:
                 # reminder so a dead probe can't sit unnoticed (the silent-freeze lesson).
                 self._alert(
                     f"blind_{room.slug}_z{zone}",
-                    f"⚠️ {room.slug} Z{zone} moisture probe dead — copying Z{sib}",
+                    f"⚠️ {room.slug} {self._zone_label(room, zone, short=True)} moisture probe dead — copying {self._zone_label(room, sib, short=True)}",
                     f"No live VWC at {looking}. Mirroring Zone {sib} until it returns.",
                 )
             else:
@@ -2398,7 +2421,7 @@ class Controller:
                 )
                 self._alert(
                     f"blind_{room.slug}_z{zone}",
-                    f"⚠️ {room.slug} Z{zone} probe dead — blind schedule",
+                    f"⚠️ {room.slug} {self._zone_label(room, zone, short=True)} probe dead — blind schedule",
                     f"No live VWC at {looking} and no healthy sibling. On a "
                     f"{int(self.blind_fallback_min)}-min blind safety schedule; VWC-driven "
                     "phase steering is paused until a probe returns.",
