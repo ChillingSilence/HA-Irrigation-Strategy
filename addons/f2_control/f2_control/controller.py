@@ -1296,7 +1296,7 @@ class Controller:
             self._alert(
                 f"cfg_{room.slug}_z{zone}_{w.split('=')[0]}",
                 "Crop Steering setting outside the engine's range",
-                f"{room.slug} zone {zone}: {w}. The engine runs on the limited value; the number "
+                f"{room.slug} {self._zone_label(room, zone)}: {w}. The engine runs on the limited value; the number "
                 "entity accepts a wider range than the engine does. Set it inside the range shown "
                 "to clear this.",
             )
