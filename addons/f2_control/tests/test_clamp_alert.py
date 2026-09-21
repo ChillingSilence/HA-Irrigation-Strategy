@@ -35,3 +35,14 @@ def test_a_value_the_engine_limits_is_reported_in_words_anyone_can_act_on():
 def test_a_room_inside_the_range_hears_nothing():
     """Every working install: no new notification after the update."""
     assert _loop(_room(1)) == []
+
+
+def test_the_alert_names_the_zone_the_way_every_other_notification_does():
+    from test_zone_count import DESCRIPTOR
+
+    states = _room(1)
+    states[DESCRIPTOR][1]["zone_names"] = {"1": "GT1"}
+    states["number.crop_steering_zone_1_field_capacity"] = ("95", {})
+    (alert,) = _loop(states)
+    assert alert["message"].startswith("default GT1 (zone 1): field_capacity=95")
+    assert alert["notification_id"] == "f2_cfg_default_z1_field_capacity"
