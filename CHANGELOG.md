@@ -9,6 +9,86 @@ notes**, the entity- and code-level detail for developers and AI agents working 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.20.2] - 2026-09-21
+
+Pair: **controller 0.17.1**. Class **C3**. One change: the intake of upstream's `main` (#29, three
+commits). Its controller fix closes two upgrade defects that **this fork's 2.19.2 / 0.16.2 and
+2.20.1 / 0.17.0 (and the mis-tagged 2.20.0) still carry**. Upstream's final review of those changes
+found them before upstream published its own 2.19.2, and fixed them there first (`5125bab`).
+**Upstream's 2.19.2 and this fork's 2.19.2 are therefore not the same code**: the intake also
+brought upstream's wording of the 2.19.2 / 0.16.2 entries, which describes those fixes, and each
+entry now says that here they arrived with this release. Upstream records an upgrade rehearsal on
+copies of two live rooms ([audit](docs/audits/2026-09-21-pr47-release-review.md)); that was
+upstream's tree, not this one. **Nothing in this release has run on hardware on this fork.**
+Update with the engine off, restart Home Assistant after the HACS update, and read the controller
+log before enabling.
+
+### 🌱 In plain English
+
+- **A room keeps every zone it was set up with.** Since 0.16.2, a controller that starts before
+  Home Assistant is ready takes a stand-in zone list and checks again every loop. It settled on
+  the first answer it got from counting zone sensors, and while Home Assistant is starting (a host
+  reboot starts both together) those sensors can appear a few at a time: a three-zone room could
+  be settled as a one-zone room, zones 2 and 3 left out, not watered and not reported, until the
+  controller was restarted. A room set up or saved through the wizard got its zones straight back,
+  because adopting its setup restores them; **a room from before setups were numbered did not.**
+  0.16.1 and older never looked again, so they kept the right list. The room's own record now
+  decides, and sensors without a record stay a stand-in.
+- **An update no longer hides a real irrigation time, and an old state file can no longer stop the
+  controller starting.** 0.16.2 taught the controller to tell a real irrigation from the moment a
+  room was merely switched on. For a state file written before that, it guessed: no water on
+  record meant "switched on, never watered". But the daily counters reset at every lights-on and
+  the water history expires, so a zone watered last night had no water on record the next
+  morning, and its real last-irrigation time was reported as unknown. The same guess compared
+  saved values as numbers without checking that they were: a file holding a number as text, or a
+  damaged value, stopped the controller starting at all. The guess is gone. An old file's time
+  keeps the meaning it had; only a switch-on recorded by 0.16.2 or later is marked as one.
+- **What that costs.** A box updated straight from 0.16.1 or older, whose room was switched on and
+  has never been watered, goes on showing that switch-on as its last irrigation until the first
+  real one, or until the room is switched off and on. 2.19.2 cleared that case and this gives it
+  back, because clearing it is what hid real irrigations. A box that has already run 0.16.2 or
+  0.17.0 saved the mark, and keeps it.
+- **Production is promoted by a checked workflow.** Upstream built the manual promotion this
+  repository's release guide listed as worth building next. *Actions > Promote* proves that the
+  candidate is the tagged commit, that the whole of CI passed on exactly that commit, that
+  `testing` has not moved since, and that a named approval and its audit are attached to the
+  release, and only then moves `main`. **This release is the one-time bootstrap the guide
+  describes**: GitHub cannot run a workflow that is not on `main` yet, so 2.20.2 is still promoted
+  by hand, after the same checks run locally.
+
+### 🔧 Technical notes
+
+- **Zone inventory** (upstream `5125bab`, **C3**). A regression from #17: the every-loop
+  re-resolution of a provisional default room accepted a partial fused-sensor count as final. Rooms
+  with `setup_revision` >= 1 had their zones restored by `_apply_setup_descriptors` in the same
+  pass; a revision-zero room stayed shrunk. Reproduced here on 0.17.0 (`[1]`) and on 0.16.1
+  (`[1, 2, 3]`). `_default_zone_ids(options, descriptor)` now reads the descriptor's
+  `active_zone_ids` / `num_zones` first; then fused sensors, **provisional** unless the operator
+  hand-mapped `options.hardware`, so re-resolved every loop until a descriptor arrives; then as
+  before. The sensor of a retired zone that outlives it no longer adds a zone.
+- **Old state files** (same commit, **C3**). `_apply_saved_zone`: a zone saved without
+  `last_shot_is_anchor` loads with `False`. The inference from `shots`, `daily_vol`,
+  `water_history` and `water_history_legacy_excluded_l` is removed, and with it the raw
+  comparisons that raised on a numeric string or a malformed value. Regression tests: partial
+  sensor startup, a real timestamp across the daily rollover with missing or expired history, an
+  explicit saved anchor staying unknown across a restart, and a string or malformed excluded
+  volume.
+- **Promote** (upstream `b3d858f`, **C0**). `.github/workflows/promote.yml`: manual dispatch from
+  `main` only, dry run by default, read-only except the one promoting job, checkout pinned to a
+  commit, no candidate code executed. `.github/scripts/promotion.py` is the same preflight, and
+  runs read-only from a terminal. Evidence is two release assets, `release-audit-vX.Y.Z.md` and
+  `promotion-audit-vX.Y.Z.json`: [docs/RELEASING.md](docs/RELEASING.md), step 5.
+  `docs/audits/2026-09-21-pr47-release-review.md` (upstream `a386d2e`) is upstream's record of its
+  own review.
+- **Upgrade in place.** No entity, option or descriptor change and no new state-file key. A state
+  file from 0.16.2 or 0.17.0 already carries an explicit `last_shot_is_anchor` and loads exactly as
+  before. Setup adoption is untouched, so a restart resumes **without a disarm cycle**. Fresh
+  install: unchanged from 2.20.1; the app-first and integration-first cases for 1 to 24 zones
+  still pass, in the controller suite and in a real Home Assistant.
+- **Why this fork's tests missed both.** They upgraded well-formed old files inside a fully started
+  Home Assistant. Neither a partial startup nor a saved value of the wrong type was in any
+  fixture.
+
 ## [2.20.1] - 2026-09-21
 
 Pair: **controller 0.17.0**. Class **C3**. Three changes, each its own pull request with its own
@@ -95,6 +175,12 @@ carries more than one behaviour change** (two C3, four C2), which
 of the person running the only staging room, and a failed soak would have to be bisected across
 them. The defects were seen on real hardware; **the fixes have not run on hardware** before
 release. Update with the engine off, read the controller log, then watch the first shot.
+
+> **On this fork, read this entry together with 2.20.2.** The *switching a room on* and *zones are
+> never invented* items below carry upstream's wording, brought in by the 2.20.2 intake. Upstream's
+> 2.19.2 contains its final-review fixes; **this fork's `v2.19.2` tag does not**. Here the old-file
+> guess and the zone list that could settle on a half-started Home Assistant shipped in 2.19.2,
+> 2.20.0 and 2.20.1, and were fixed in 2.20.2 / controller 0.17.1.
 
 ### 🌱 In plain English
 
