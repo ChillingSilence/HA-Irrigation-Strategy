@@ -1,3 +1,13 @@
+# 0.17.2
+
+Pair with integration 2.20.3. **C3** by the rule; notifications and the served dashboard only. Not run on hardware before release.
+
+- **Notifications name the zone the operator's way**: "GT4 (Z2)" / "GT4 (zone 2)", from the descriptor's `zone_names`, read on every rediscovery (a rename needs no restart and no disarm cycle). Notification ids, entity ids and log lines keep the number. No names, default names or malformed names read as before.
+- **No "lights now read from the integration" alert on a wizard-made room whose lights option is still the shipped 10-22.** A room on the legacy kill-switch helper, or any room whose option was changed, is still told. Which hours are used is unchanged.
+- **"F2 config clamp" is now "Crop Steering setting outside the engine's range"**, and says the engine runs on the limited value and how to clear it. Same notification id.
+- The dashboard served by the app is the 2.20.3 build (dropdown lists readable on a dark theme).
+- No change to add-on options, to the state file, or to what is watered and when.
+
 # 0.17.1
 
 Pair with integration 2.20.2. **C3.** Two upgrade fixes written upstream (`5125bab`), found by upstream's final review of 0.16.2's changes. **This fork's 0.16.2 and 0.17.0 do not have them.** Not run on hardware on this fork before release.
