@@ -1276,8 +1276,10 @@ class Controller:
         for w in warns:
             self._alert(
                 f"cfg_{room.slug}_z{zone}_{w.split('=')[0]}",
-                "F2 config clamp",
-                f"{room.slug} zone {zone}: {w}",
+                "Crop Steering setting outside the engine's range",
+                f"{room.slug} zone {zone}: {w}. The engine runs on the limited value; the number "
+                "entity accepts a wider range than the engine does. Set it inside the range shown "
+                "to clear this.",
             )
         return p
 
