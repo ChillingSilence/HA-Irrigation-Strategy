@@ -1278,7 +1278,7 @@ class Controller:
             self._alert(
                 f"cfg_{room.slug}_z{zone}_{w.split('=')[0]}",
                 "F2 config clamp",
-                f"{room.slug} {self._zone_label(room, zone)}: {w}",
+                f"{room.slug} zone {zone}: {w}",
             )
         return p
 
