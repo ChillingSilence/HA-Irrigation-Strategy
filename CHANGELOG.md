@@ -9,6 +9,65 @@ notes**, the entity- and code-level detail for developers and AI agents working 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.20.3] - 2026-09-22
+
+Pair: **controller 0.17.2**. Class **C3** by the rule (four of the six changes touch the
+controller), though none of them changes what is watered, or when: three reword or silence a
+notification, one restyles the dashboard, one adds a read-only Repairs card. Six pull requests,
+each with its own tests (#31 to #36), all from the first real install. **This candidate carries
+more than one change**, which [docs/RELEASING.md](docs/RELEASING.md) says a candidate should
+not; they were bundled by decision of the person running the only staging room. **Nothing in
+this release has run on hardware.** Restart Home Assistant after the HACS update.
+
+### 🌱 In plain English
+
+- **A notification calls a zone what you called it.** Zones named GT1 and GT4, and the phone said
+  "default Z2 probe dead", to the fair answer "I don't have a zone 2". Notifications now read
+  "GT4 (Z2)": your name first, the number still there, because entity ids and the log say zone N.
+  Rename a zone in *Configure* and the next notification follows, with no restart.
+- **A fresh install is no longer told about settings it never made.** The first notification on
+  a new room read "The add-on option still says 10:00-22:00": the shipped default, which nobody
+  there had chosen. A room made by the wizard, on an app whose lights option was never touched, no
+  longer gets it. A room that may really rely on that option still does.
+- **"F2 config clamp" is now in plain words.** F2 is one facility's room. The notification now
+  says a setting is outside the engine's range, that the engine is running on the limited value,
+  and how to clear it.
+- **Dropdown lists can be read on a dark theme.** The steering-mode dropdown, both filters on
+  Activity and the status filter on Sensors opened as a white list with pale text.
+- **Repairs says when a setting is not where the controller looks for it.** The controller finds
+  each setting by its exact entity id. A room created while Home Assistant was still running old
+  code, or an entity id edited by hand, leaves a setting where nothing looks, and the controller
+  quietly runs on a built-in default (on the install this was found on: a 150 L daily cap for a
+  two-plant tent). Settings > Repairs now lists each one, where it is and where it should be.
+  Nothing is renamed for you.
+
+### 🔧 Technical notes
+
+- **Zone names in notifications** (#33, #36, **C3**). `Controller._zone_names(attrs)` reads the
+  descriptor's `zone_names` on every rediscovery, outside setup adoption; `_zone_label()` is used
+  by every zone notification. Display only: notification ids, entity ids, log lines and the state
+  file are unchanged. "Zone N", no names (an older integration) or malformed names read as before.
+- **Lights alert** (#32, **C3**). Silent only when the option is the shipped `SHIPPED_LIGHTS`
+  (10-22, pinned to `config.yaml` by a test) or absent, **and** the default room's descriptor names
+  the integration's own kill switch. A room on the legacy helper, or any changed option, is told
+  as before. Which hours the engine uses is unchanged. Accepted residual: a 2.17 / 2.18 wizard
+  room on untouched options whose real lights happen to be 10-22 loses the hint.
+- **Out-of-range alert** (#31, **C3**). Title and text; same notification id, so the new card
+  replaces the old. The number entities still accept wider ranges than the engine for 14 of 17
+  settings: not addressed here.
+- **Dropdown lists** (#34, **C1**). The browser paints an open native select from the option's
+  colours, and Home Assistant's input fill is a translucent rgba. `select option, select optgroup`
+  take the theme's opaque canvas and text colours. New check in `verify-live.mjs`; it asserts
+  computed colours, not pixels. The three committed bundles are rebuilt from that source.
+- **Repairs card `entities_moved`** (#35, **C2**). `health.moved_entities()`: a number, switch or
+  select of the room whose registered id is not the pinned one **and** whose expected id holds
+  nothing. Read-only. Fused sensors and buttons are not judged. Shown while the room is off. An id
+  an operator changed on purpose is reported too, and left alone.
+- **Upgrade in place.** No entity, option, descriptor or state-file change. The three seeded old
+  installs get no Repairs card, a legacy room on the shipped lights hours still gets its alert,
+  and a room with no zone names reads exactly as before (all tested). Fresh install: tested in a
+  real Home Assistant for each change.
+
 ## [2.20.2] - 2026-09-21
 
 Pair: **controller 0.17.1**. Class **C3**. One change: the intake of upstream's `main` (#29, three
