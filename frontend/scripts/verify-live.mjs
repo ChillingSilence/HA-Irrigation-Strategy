@@ -328,6 +328,15 @@ try {
     await visible(page.getByText("Zone 1: sensor data unavailable", { exact: true }));
     assert.equal(await page.getByText("Invalid Date", { exact: false }).count(), 0);
     assert.equal(await page.locator(".demo-banner").count(), 0);
+    // Notices first, then the totals, the grow day, and the zones beside the tank.
+    const order = await page.evaluate(() =>
+      [
+        ...document.querySelectorAll(
+          ".attention-list, .metric-strip, [data-day-timeline], .overview-grid",
+        ),
+      ].map((el) => (el.matches("[data-day-timeline]") ? "timeline" : el.classList[0])),
+    );
+    assert.deepEqual(order, ["attention-list", "metric-strip", "timeline", "overview-grid"]);
   });
   await check("stale probe is unavailable in both overview and sensor diagnostics", async () => {
     const probe = "sensor.crop_steering_f1_vwc_zone_1";
@@ -353,6 +362,15 @@ try {
       await visible(page.getByText("Controller disconnected", { exact: true }));
       await page
         .getByRole("navigation", { name: "Main navigation" })
+        .getByRole("button", { name: "Overview", exact: true })
+        .click();
+      await visible(
+        page
+          .locator("[data-tank-status]")
+          .getByText("Disconnected · last received", { exact: true }),
+      );
+      await page
+        .getByRole("navigation", { name: "Main navigation" })
         .getByRole("button", { name: "Irrigation plan", exact: true })
         .click();
       assert.equal(await field("p1_target_vwc").isDisabled(), true);
@@ -373,6 +391,11 @@ try {
       .click();
     await visible(page.getByRole("heading", { name: "No zones discovered", exact: true }));
     assert.equal(await page.locator("#desktop-room").isDisabled(), true);
+    await page
+      .getByRole("navigation", { name: "Main navigation" })
+      .getByRole("button", { name: "Overview", exact: true })
+      .click();
+    await visible(page.getByRole("heading", { level: 1, name: "Overview", exact: true }));
   });
   await check(
     "named F2 stays distinct from default and unsupported tools cannot misroute",

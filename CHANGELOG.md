@@ -9,282 +9,541 @@ notes**, the entity- and code-level detail for developers and AI agents working 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.20.4] - 2026-09-24
+## [2.21.0] - 2026-09-25
 
-Pair: **controller 0.17.3**. Class **C3** by the rule (it touches the controller). **One change**,
-#38, built in four layers: every notification and Repairs card gets an error code, the codes are
-explained in the docs and in the dashboard, and the notifications are reworded. It changes what
-the notifications say, not what is watered or when. **Nothing in this release has run on
-hardware.** Restart Home Assistant after the HACS update.
+Pair: **controller 2.21.0**, one number for both halves from this release on. Class **C3**: the
+controller and the integration change; the engine does not. **Owner-approved rehearsal release** (the
+owner, 25 September 2026), no staging soak; see the release audit.
 
-### 🌱 In plain English
+The Overview timeline is class **C1**: dashboard only, nothing the controller or the integration
+reads. Not run on hardware; checked read-only against a live room's recorded history. A shot cut
+short by something else is class **C3** (irrigation behaviour, controller only). Not run on
+hardware; the 23 September event is replayed in the controller suite. A shot interrupted by a
+Home Assistant restart is class **C3** (controller only). Not run on hardware; the restart is
+replayed in the controller suite.
 
-- **Every notification has an error code, and every code is explained.** Each notification from
-  the controller app, and each Crop Steering card in Settings > Repairs, now ends with a code such
-  as CS-101. Look it up in [Error codes](docs/ERROR_CODES.md), or in the dashboard under
-  *Help & tools > Error codes* (type "101", or a word such as "probe"): what it means, whether the
-  plants are still being watered meanwhile, the likely causes, and what to do.
-- **Notifications name your room and zone the way you did.** "Tent · GT4 (Z2)", not "default Z2".
-  "default" was the controller's internal name for the first room. A single room left with the
-  wizard's own default name shows no room name at all.
-- **A probe whose reading has stopped moving is no longer called dead.** On the first real
-  install a probe in a cube with no plant was reported as "probe dead — blind schedule". The
-  notification now says which of three things it is: the reading hasn't changed (CS-101, normal
-  with no plant in the cube), the sensor isn't reporting (CS-102), or the reading is impossible
-  (CS-103), with the value, for how long, and advice that fits. What the controller does meanwhile
-  is unchanged.
-- **Plain words throughout.** Every notification is rewritten; entity ids moved to a last
-  "Sensor:" or "Detail:" line. The starving-zone warning no longer says "no water 16666666.7h"
-  for a zone the controller has never watered.
-- **An empty room can simply be switched off.** With *Room Active* off, the controller leaves the
-  room alone: no watering and no notifications. Not new, but the moisture notification now says so.
-
-### 🔧 Technical notes
-
-- **Controller** (**C3**). `_alert(key, code, title, message, room=None, zone=None)`: the title
-  reads `<where>: <title> (<code>)` and the message ends `Code <code>. What it means and what to
-  do: Crop Steering → Help & tools → Error codes.`; the log line carries the title. `_where()` is
-  the descriptor's `room_name` (read on every rediscovery, display only; blank, "default",
-  "Crop Steering", "Crop Steering System" and non-strings count as unnamed) plus `_zone_title()`
-  ("GT4 (Z2)" or "Zone 2"); one unnamed room shows none, two or more fall back to the slug.
-  `_unreadable()` re-reads the fused moisture sensor only when a reminder is due and returns
-  CS-101 (`last_updated` older than 20 minutes), CS-102 (missing, unavailable, unknown,
-  non-numeric, or no valid timestamp) or CS-103 (outside 0-100). The daily-cap and high-EC holds
-  are told apart as CS-205 and CS-206. `_zone_label()` is gone. **Notification ids are
-  unchanged** (`f2_{key}`), so an update replaces an old card instead of adding a second one.
-- **Integration** (**C1**, translations only). Repairs titles end `(CS-60x)` and descriptions say
-  where to look the code up. Issue ids and translation keys are unchanged.
-- **The list.** `docs/error-codes.json` (28 codes: meaning, watering meanwhile, causes, fixes,
-  severity, where it shows) is written out as `docs/ERROR_CODES.md` by
-  `scripts/render_error_codes.py`, and the dashboard imports the same file.
-  `tests/test_error_codes.py` fails on a code that is raised but not listed, a listed code nothing
-  raises, a Repairs card without its code, or a stale page; `tests_ha/test_error_codes.py` checks
-  the card text a real Home Assistant resolves.
-- **Dashboard** (**C1**). *Help & tools > Error codes*: search by code in any form (CS-101,
-  cs101, 101) or by words; `#/help?code=CS-101` opens one. Browser check: exactly the listed
-  codes, search, the link, no overflow, axe clean with every entry open and on a dark theme. The
-  three bundles are rebuilt from source.
-- **Upgrade in place.** No entity, option, descriptor or state-file change, and notification ids
-  are unchanged. The seeded 2.17, 2.18 and env-era installs get their stored room name ("Flower
-  room", "Tent", none), and descriptors without names read "Zone N" (tested in a real Home
-  Assistant). Fresh install: a room named in the wizard titles its alerts with that name, and its
-  first Repairs card reads "Crop Steering: engine not running (CS-602)". An automation that matched
-  on the old notification wording must be updated; nothing in this repository did.
-
-## [2.20.3] - 2026-09-22
-
-Pair: **controller 0.17.2**. Class **C3** by the rule (four of the six changes touch the
-controller), though none of them changes what is watered, or when: three reword or silence a
-notification, one restyles the dashboard, one adds a read-only Repairs card. Six pull requests,
-each with its own tests (#31 to #36), all from the first real install. **This candidate carries
-more than one change**, which [docs/RELEASING.md](docs/RELEASING.md) says a candidate should
-not; they were bundled by decision of the person running the only staging room. **Nothing in
-this release has run on hardware.** Restart Home Assistant after the HACS update.
+The dashboard changes below are class **C1**: dashboard only, nothing the controller or the
+integration reads. Not run on hardware; checked by the browser contract scripts.
 
 ### 🌱 In plain English
 
-- **A notification calls a zone what you called it.** Zones named GT1 and GT4, and the phone said
-  "default Z2 probe dead", to the fair answer "I don't have a zone 2". Notifications now read
-  "GT4 (Z2)": your name first, the number still there, because entity ids and the log say zone N.
-  Rename a zone in *Configure* and the next notification follows, with no restart.
-- **A fresh install is no longer told about settings it never made.** The first notification on
-  a new room read "The add-on option still says 10:00-22:00": the shipped default, which nobody
-  there had chosen. A room made by the wizard, on an app whose lights option was never touched, no
-  longer gets it. A room that may really rely on that option still does.
-- **"F2 config clamp" is now in plain words.** F2 is one facility's room. The notification now
-  says a setting is outside the engine's range, that the engine is running on the limited value,
-  and how to clear it.
-- **Dropdown lists can be read on a dark theme.** The steering-mode dropdown, both filters on
-  Activity and the status filter on Sensors opened as a white list with pale text.
-- **Repairs says when a setting is not where the controller looks for it.** The controller finds
-  each setting by its exact entity id. A room created while Home Assistant was still running old
-  code, or an entity id edited by hand, leaves a setting where nothing looks, and the controller
-  quietly runs on a built-in default (on the install this was found on: a 150 L daily cap for a
-  two-plant tent). Settings > Repairs now lists each one, where it is and where it should be.
-  Nothing is renamed for you.
+- **The Overview shows the day, first.** Its moisture and EC chart is replaced by the room's
+  grow-day, at the top of the page under today's totals, from lights-on to the next lights-on, one row per zone on one time axis: lights-off shaded, the
+  phase each zone was in, every shot (the valve opening, as wide as it was open), what held a zone
+  back and for how long (a spent daily budget hatched red, *blocked 13:31–22:00*; a gate such as a
+  dosing hold or the kill switch outlined amber), and every setpoint change, from what to what.
+  Point at or tap any of it for the details; the same events are listed in words below.
+- **What comes next is marked as an estimate.** The rest of the day is drawn dashed: P2 until
+  lights-off and P3 from there. For a zone in P2 whose moisture has been falling steadily since
+  its last shot settled, the dry-down is drawn to its re-water threshold: *next shot ≈ 14:20*.
+  With too little recent data, a shot running or a hold open, it says why there is no estimate
+  instead of guessing. A zone in P1 shows its next shot from the ramp's interval, one in P0 the
+  latest time P1 can start; how long P0 and P1 last is not drawn, because nobody knows.
+- **One line per zone:** its phase and for how long, P1 shots so far against the ramp's maximum,
+  litres used against the daily budget, and the next expected shot. Moisture is scaled to the
+  day's own readings, not 0–100 %; zones are named, never told apart by colour alone; red, amber
+  and green only ever mean a state. The age of the newest reading is shown, and it fits a phone.
+- **No new polling.** The day's history is read once when the Overview opens (inside Home
+  Assistant over its own connection) and kept current from the updates the dashboard already
+  receives.
+- Insights keeps its moisture and EC chart.
+- **Headings say what the page is, once.** The Overview is titled after its room (*Flower 1
+  overview*). The sentences under page headings that only repeated them are gone; Today's targets
+  and Scheduled targets keep theirs, because they say how a schedule and a draft behave.
+- **The Overview is the room now.** Water per zone and per plant is on Zones, which already had
+  it; the zones table keeps each zone's water today. The scheduling summary is gone: the status
+  line at the top of every page already says whether the room is watering and why not. Recent
+  activity opens beside any page from the top bar, and the daily workflow is now a linked daily
+  routine at the top of Help & tools.
+- **The Overview is shorter and balanced.** Under the grow day, the zones sit beside the tank
+  instead of below it (on a phone they stack as before). The tank card has the same space above
+  the tank and *Tank EC* as beside them, where before they sat flush under the heading, and shows
+  the level, EC, pH and temperature with the pump, filling and last fill in one row, and one
+  short line on what the pump and fill readings do not prove. The zones
+  table carries each zone's target under its moisture and fits without scrolling sideways. The
+  sentences under panel titles and the captions under today's totals moved into tooltips. At
+  1440 px wide the Overview is under two screens tall; it was more than three.
+- **A calmer look.** No text smaller than 12 px anywhere (118 places were 7–11 px, and the
+  plan graph's labels 10.5–11 px), page and panel titles and today's totals in one semibold weight, no divider under every panel title, no shaded band behind
+  table headers, neutral status chips with a coloured dot, and a quieter menu. Colours still
+  follow your Home Assistant theme.
+- **A shot that something else cuts short now ends there, and only the water it gave is counted.**
+  On 23 September at 11:25 the batch tank ran empty 4 seconds into a zone 1 shot. The dosing
+  automation took the tank and its pump, and the feed guard closed the valve and main line. The
+  controller did not notice: it waited out the full 170 seconds and counted about 7.9 litres for
+  about 0.2 litres delivered. It now checks during every shot, about every 2 seconds: when one
+  of its holds (dosing, a tank fill, a flush) comes on, or the zone's valve is switched off by
+  something else, the shot ends there and only the seconds the valve was open are counted. It
+  closes its own valve and main line if they are still open, never touches a pump a hold is
+  using, and sends one alert saying what ended the shot. A feed path closed by somebody else is
+  not a hardware fault. Nothing is switched off on a timer, and the kill switch and manual
+  override work as before.
+
+- **A shot interrupted by a Home Assistant restart is closed, not left running.** If Home Assistant
+  restarted (an update, a power blip to the host, a crash) or a valve's device reconnected while a
+  shot was open, the valve kept running: after a restart Home Assistant says every switch changed
+  just then, so the controller took its own open valve for someone hand-watering and left it on,
+  with no alert. It now reads the valve's history: ON since the shot opened it, with only the
+  restart in between, is the shot's and is closed (valve first, then the main line and pump, as
+  always). A valve someone switched off and on again, or had on before the shot, is still left
+  alone. If Home Assistant has no history for it, nothing is switched and the *may still be ON*
+  notification (CS-309) says so, every loop until it can tell.
 
 ### 🔧 Technical notes
 
-- **Zone names in notifications** (#33, #36, **C3**). `Controller._zone_names(attrs)` reads the
-  descriptor's `zone_names` on every rediscovery, outside setup adoption; `_zone_label()` is used
-  by every zone notification. Display only: notification ids, entity ids, log lines and the state
-  file are unchanged. "Zone N", no names (an older integration) or malformed names read as before.
-- **Lights alert** (#32, **C3**). Silent only when the option is the shipped `SHIPPED_LIGHTS`
-  (10-22, pinned to `config.yaml` by a test) or absent, **and** the default room's descriptor names
-  the integration's own kill switch. A room on the legacy helper, or any changed option, is told
-  as before. Which hours the engine uses is unchanged. Accepted residual: a 2.17 / 2.18 wizard
-  room on untouched options whose real lights happen to be 10-22 loses the hint.
-- **Out-of-range alert** (#31, **C3**). Title and text; same notification id, so the new card
-  replaces the old. The number entities still accept wider ranges than the engine for 14 of 17
-  settings: not addressed here.
-- **Dropdown lists** (#34, **C1**). The browser paints an open native select from the option's
-  colours, and Home Assistant's input fill is a translucent rgba. `select option, select optgroup`
-  take the theme's opaque canvas and text colours. New check in `verify-live.mjs`; it asserts
-  computed colours, not pixels. The three committed bundles are rebuilt from that source.
-- **Repairs card `entities_moved`** (#35, **C2**). `health.moved_entities()`: a number, switch or
-  select of the room whose registered id is not the pinned one **and** whose expected id holds
-  nothing. Read-only. Fused sensors and buttons are not judged. Shown while the room is off. An id
-  an operator changed on purpose is reported too, and left alone.
-- **Upgrade in place.** No entity, option, descriptor or state-file change. The three seeded old
-  installs get no Repairs card, a legacy room on the shipped lights hours still gets its alert,
-  and a room with no zone names reads exactly as before (all tested). Fresh install: tested in a
-  real Home Assistant for each change.
+- New `frontend/src/lib/day-timeline.ts` (pure, tested): `growDay()` (lights-on to the next
+  lights-on in the browser's time zone, as `foldRecorded` folds days), `phaseBands()`,
+  `valveShots()`, `alignBands()`, `zoneBlocks()`, `setpointChanges()`, `levels()`, `readings()`,
+  `dryDown()` (least squares over the last hour from 15 minutes after the last shot ended: at
+  least five readings over at least 15 minutes, falling at least 0.1 %/h), `nextShot()` and
+  `appendLive()`.
+- Shots are the zone valve's on→off intervals (valves from the room's `engine_config`). The
+  controller posts a loop's decision and phases after that loop's shots, so a shot is named by
+  the first `current_decision` row after its valve closed (its `fired` entry,
+  `Z<n> <phase> <reason>`), and a phase change posted by the same loop starts at the shot
+  (`alignBands`). Holds are the zone's `current_decision` `blocked` entries, one interval per
+  unbroken run of the same hold (numbers in the text may change): `daily-cap` is the budget,
+  `BLOCK` a refusal, anything else a gate.
+- Loading: `Controller.timeline(request)`. Inside Home Assistant, `history/history_during_period`
+  on `hass.connection` (`live.ts` `liveHistory`): states without attributes and
+  `minimal_response`, and the decision sensor with attributes and
+  `significant_changes_only: false`. Standalone, `GET history/period` in chunks of 40 entities
+  (`client.ts`). Limited to the selected room's entities and mapped valves, and to one grow-day.
+  Loaded once per room and grow-day; `appendLive()` then adds each subscribed (standalone: each
+  polled) change.
+- Demo: `demoDay()` generates a grow-day on the demo probes' own day shape (P0, six P1 shots, P2
+  top-ups, P3), shifted per probe, with a feed-EC hold on Flower 2 zone 2 ended by a feed-band
+  change and Flower 1 zone 3 held since it was disabled.
+- `pages/overview.tsx` renders `components/day-timeline.tsx` in place of `HistoryChart`, which
+  stays on Insights, directly under the totals strip and above the tank and zones.
+- `Heading.description` is optional. `pages/overview.tsx` titles itself `${room.name} overview`
+  (plain *Overview* when no room is discovered). `.page-heading` margin 30/25 → 20/20 px (16/16 on
+  a phone).
+- New `components/activity-panel.tsx`: a top-bar button on every page opens a right-hand sheet
+  with the room's last ten events (`EventList`) and a link to Activity. The Overview loses its
+  Recent activity panel, the daily workflow card (now `ol.daily-routine` in Help's intro), the
+  `DailyWaterSummary` table (still on Zones) and the `room-summary` block; their CSS goes with
+  them.
+- `.overview-grid` (zones `7fr`, tank `3fr`; one column under 1200 px). `ZoneTable({ compact })`:
+  no *VWC reference* or arrow column and no zone icon, the target under moisture (its label
+  wraps), `LastIrrigation({ compact })` without the date line. `components/tank-status.tsx` rewritten compact: a 100×120 drawing whose
+  shape touches its box, `dl.tank-quality` and `dl.tank-equipment`, one 20 px inset; the hooks
+  and value strings are unchanged. `Metrics` shows only the *waiting for controller data*
+  caption. `DayTimeline` loses its heading paragraph. `verify-tank-status.mjs` holds the tank's
+  top inset to its left inset.
+- `styles.css` set its type and chrome twice: the original rules, then a later "Home
+  Assistant-native density" block overriding them (`h1` 26/400 over 28/650, `h2` 20/400 over
+  17/650, panel heading padding, table sizes, metric weight, nav weights). Each is now set once,
+  in the original rules, and several changed: `h1` 24px/600, `h2` 16px/600, table text 13px with
+  no header band, today's totals at weight 600; the later block keeps only the theme mappings. New `:root` tokens
+  `--text-xs`…`--text-2xl` (12–24 px) and `--space-2`…`--space-6`. New `lib/type-scale.test.ts`
+  fails any stylesheet under `frontend/src` that sets text below 12 px, a relative size without
+  a 12 px floor (`.unit` is now `max(0.52em, 12px)`), or chart text below 12 px (the plan graph's
+  `fontSize` 10.5/11 → 12). `.status-good` is a
+  neutral pill (it leaves the `--primary-strong` contrast list); `nav button.active` has a
+  neutral fill with a 2 px accent bar.
+  The Overview's compact zones table keeps ages and units on one line at the larger table
+  text; phone-only panel title sizes (18/20 px) are gone.
+- **Controller** (`controller.py`), a shot cut short from outside: in every round `_wait_shot` also
+  reads each `hold_entities` entity (ON as `_blocked` reads it, the shared `ON_STATES`) and the
+  shot's own valve, with the same bounded reads and sleeps of at most 2 s between rounds, after the kill
+  switch, `room_active` and manual override, which therefore still win. It returns
+  `(elapsed, None | ("abort", entity) | ("external", entity))` instead of `(elapsed, bool)`. The
+  valve reading OFF counts only once it has been seen ON in that shot: right after `turn_on`, Home
+  Assistant can still show the old OFF (a Zigbee report can lag 1.6 s). `_execute_shot` hands an
+  external stop to the new `_close_cut_short`, which switches off the shot's valve and main line
+  unless they read OFF, and its pump unless it reads OFF or a hold is ON (the `_inflight_plan`
+  rule). It reads back only what it switched off: a switch of its own that will not close still
+  latches the hardware hold and keeps the record for the reconciler. Otherwise it clears
+  `shot_inflight` as the normal close does. The error cleanup, which switches off all three, never
+  runs for such a shot. Counted time: the valve's `last_changed` when it reads OFF and that falls
+  between the valve opening and the detection, else the detection. Counters as for a kill-switch
+  abort: the shot counts, with the volume delivered. One alert, `cutshort_<room>_z<n>` (*shot
+  stopped early, something else closed the feed*, CS-307), debounced like the others, names the
+  entity and the seconds delivered against planned. No change to add-on options, the state file,
+  entities or the normal shot.
+- **Controller** (`controller.py`), an interrupted shot after a Home Assistant restart: when a
+  switch the in-flight record names reads ON with `last_changed` outside `INFLIGHT_OPEN_WINDOW_S`,
+  `_inflight_plan` no longer hands it to a person on that alone. New `ha_history()` reads
+  `GET history/period/<start>` (`minimal_response`, `no_attributes`, `end_time` now) from the
+  window's start, and the pure `_on_since_shot()` decides: ON inside the window with only
+  `unavailable`/`unknown` after it is the shot's (closed as before, with the line-in-use and hold
+  rules unchanged); ON before the window, first ON after it, or an OFF after the shot opened it is a
+  person's (left, record closed); no readable history, or a row it can't read, is `unsure` (CS-309,
+  record kept, retried every loop). CS-309's catalog entry and alert text say so. The add-on test
+  rig gains `FakeHA.ha_history` and an autouse fixture so no test reaches a real history endpoint.
 
-## [2.20.2] - 2026-09-21
 
-Pair: **controller 0.17.1**. Class **C3**. One change: the intake of upstream's `main` (#29, three
-commits). Its controller fix closes two upgrade defects that **this fork's 2.19.2 / 0.16.2 and
-2.20.1 / 0.17.0 (and the mis-tagged 2.20.0) still carry**. Upstream's final review of those changes
-found them before upstream published its own 2.19.2, and fixed them there first (`5125bab`).
-**Upstream's 2.19.2 and this fork's 2.19.2 are therefore not the same code**: the intake also
-brought upstream's wording of the 2.19.2 / 0.16.2 entries, which describes those fixes, and each
-entry now says that here they arrived with this release. Upstream records an upgrade rehearsal on
-copies of two live rooms ([audit](docs/audits/2026-09-21-pr47-release-review.md)); that was
-upstream's tree, not this one. **Nothing in this release has run on hardware on this fork.**
-Update with the engine off, restart Home Assistant after the HACS update, and read the controller
-log before enabling.
+## [2.19.5] - 2026-09-23
+
+Pair: **controller 0.16.5**. Class **C3**: engine, controller and integration. **Owner-approved rehearsal
+release** (the owner, 23 September 2026), no staging soak; see the release audit.
+
+The irrigation changes (engine and controller) are class **C3**; the plan, setup and Repairs changes
+are class **C2**. The zone status change is class **C3** (controller and integration).
 
 ### 🌱 In plain English
 
-- **A room keeps every zone it was set up with.** Since 0.16.2, a controller that starts before
-  Home Assistant is ready takes a stand-in zone list and checks again every loop. It settled on
-  the first answer it got from counting zone sensors, and while Home Assistant is starting (a host
-  reboot starts both together) those sensors can appear a few at a time: a three-zone room could
-  be settled as a one-zone room, zones 2 and 3 left out, not watered and not reported, until the
-  controller was restarted. A room set up or saved through the wizard got its zones straight back,
-  because adopting its setup restores them; **a room from before setups were numbered did not.**
-  0.16.1 and older never looked again, so they kept the right list. The room's own record now
-  decides, and sensors without a record stay a stand-in.
-- **An update no longer hides a real irrigation time, and an old state file can no longer stop the
-  controller starting.** 0.16.2 taught the controller to tell a real irrigation from the moment a
-  room was merely switched on. For a state file written before that, it guessed: no water on
-  record meant "switched on, never watered". But the daily counters reset at every lights-on and
-  the water history expires, so a zone watered last night had no water on record the next
-  morning, and its real last-irrigation time was reported as unknown. The same guess compared
-  saved values as numbers without checking that they were: a file holding a number as text, or a
-  damaged value, stopped the controller starting at all. The guess is gone. An old file's time
-  keeps the meaning it had; only a switch-on recorded by 0.16.2 or later is marked as one.
-- **What that costs.** A box updated straight from 0.16.1 or older, whose room was switched on and
-  has never been watered, goes on showing that switch-on as its last irrigation until the first
-  real one, or until the room is switched off and on. 2.19.2 cleared that case and this gives it
-  back, because clearing it is what hid real irrigations. A box that has already run 0.16.2 or
-  0.17.0 saved the mark, and keeps it.
-- **Production is promoted by a checked workflow.** Upstream built the manual promotion this
-  repository's release guide listed as worth building next. *Actions > Promote* proves that the
-  candidate is the tagged commit, that the whole of CI passed on exactly that commit, that
-  `testing` has not moved since, and that a named approval and its audit are attached to the
-  release, and only then moves `main`. **This release is the one-time bootstrap the guide
-  describes**: GitHub cannot run a workflow that is not on `main` yet, so 2.20.2 is still promoted
-  by hand, after the same checks run locally.
+- **A grow plan never stops a starving zone from being watered.** While a room's grow plan is held
+  (in error, out of date, or missing after a restart) the controller held every shot on every zone
+  the plan runs, for as long as the hold lasted. Now the overnight emergency shot, the lights-on
+  watchdog and the minimum daily volume still water those zones; only the routine steering waits
+  for the plan. A zone with a dead probe keeps its timed safety schedule too. The kill switch,
+  a hardware fault, the zone switches, bad feed water and the daily budget still stop them, as
+  before.
+- **A missed minute at lights-on no longer holds a room all day.** A plan moved on to the new day
+  only in the two minutes after lights-on. If Home Assistant was restarting then, or the
+  controller or a probe was a few minutes late, the plan went into error and held every zone
+  until the next lights-on. Now it applies the new day at the first minute it can, and keeps the
+  previous day's targets until then. Changing the lights-on hour while a plan runs, or a lights-on
+  hour that falls in the daylight-saving jump, no longer puts it in error either.
+- **Zones cannot be changed under a running plan.** Setup now refuses to add or archive zones, or
+  to archive the room, while its plan is armed or running, instead of saving the change and
+  putting the plan in error. Disarm the plan first.
+- **Repairs says when a plan is holding.** A card appears for every hold (the plan in error, the
+  controller unable to use it, a zone the plan does not steer today), and a warning while a plan
+  has not moved on to today, each with the reason.
+- **The zone status sensor has one writer.** The zone status in Home Assistant had two authors
+  taking turns about twice a minute: the integration, with a fixed 40 % moisture threshold
+  (*Dry - Needs Water*), and the controller, with its phase-aware label (*Overnight dryback*). The
+  controller now publishes its label on a separate entity, and the zone status shows exactly that,
+  with its reason. When the controller has not reported for 10 minutes the zone status says
+  *Controller not reporting* instead of guessing from a threshold. Cards and automations keep the
+  same entity. Until the controller is updated too, the zone status shows the older controller's
+  own label, as before, and is no longer fought over.
 
 ### 🔧 Technical notes
 
-- **Zone inventory** (upstream `5125bab`, **C3**). A regression from #17: the every-loop
-  re-resolution of a provisional default room accepted a partial fused-sensor count as final. Rooms
-  with `setup_revision` >= 1 had their zones restored by `_apply_setup_descriptors` in the same
-  pass; a revision-zero room stayed shrunk. Reproduced here on 0.17.0 (`[1]`) and on 0.16.1
-  (`[1, 2, 3]`). `_default_zone_ids(options, descriptor)` now reads the descriptor's
-  `active_zone_ids` / `num_zones` first; then fused sensors, **provisional** unless the operator
-  hand-mapped `options.hardware`, so re-resolved every loop until a descriptor arrives; then as
-  before. The sensor of a retired zone that outlives it no longer adds a zone.
-- **Old state files** (same commit, **C3**). `_apply_saved_zone`: a zone saved without
-  `last_shot_is_anchor` loads with `False`. The inference from `shots`, `daily_vol`,
-  `water_history` and `water_history_legacy_excluded_l` is removed, and with it the raw
-  comparisons that raised on a numeric string or a malformed value. Regression tests: partial
-  sensor startup, a real timestamp across the daily rollover with missing or expired history, an
-  explicit saved anchor staying unknown across a restart, and a string or malformed excluded
-  volume.
-- **Promote** (upstream `b3d858f`, **C0**). `.github/workflows/promote.yml`: manual dispatch from
-  `main` only, dry run by default, read-only except the one promoting job, checkout pinned to a
-  commit, no candidate code executed. `.github/scripts/promotion.py` is the same preflight, and
-  runs read-only from a terminal. Evidence is two release assets, `release-audit-vX.Y.Z.md` and
-  `promotion-audit-vX.Y.Z.json`: [docs/RELEASING.md](docs/RELEASING.md), step 5.
-  `docs/audits/2026-09-21-pr47-release-review.md` (upstream `a386d2e`) is upstream's record of its
-  own review.
-- **Upgrade in place.** No entity, option or descriptor change and no new state-file key. A state
-  file from 0.16.2 or 0.17.0 already carries an explicit `last_shot_is_anchor` and loads exactly as
-  before. Setup adoption is untouched, so a restart resumes **without a disarm cycle**. Fresh
-  install: unchanged from 2.20.1; the app-first and integration-first cases for 1 to 24 zones
-  still pass, in the controller suite and in a real Home Assistant.
-- **Why this fork's tests missed both.** They upgraded well-formed old files inside a fully started
-  Home Assistant. Neither a partial startup nor a saved value of the wrong type was in any
-  fixture.
+- **Engine** (`crop_steering_engine/core.py`, and the vendored copy): new
+  `ZoneSnapshot.steering_held` (default `False`, so every caller is unchanged). When it is set,
+  `decide()` skips the per-phase steering rules and the anti-lockout flush (it steers to
+  `max_ec`, a plan setpoint) and fires only the P3 emergency, the watchdog and the minimum-daily
+  floor; the high-EC blocks still apply and phases still move. Holding only the routine decision
+  in the controller was not enough: a zone drying in P2 is a top-up first, so the watchdog behind
+  it never came up.
+- **Controller** (`controller.py`): `_snapshot` sets `steering_held` from `strategy_block`.
+  `PLAN_HOLD_EXEMPT` = `p3_emergency`, `watchdog`, `min_daily`, `blind_fallback`,
+  `blind_copy_rescue`; `_blocked(room, zone, reason)` lets those kinds through the plan hold (and
+  logs it), and `_execute_shot(plan_exempt=True)` skips the plan preflight for them. The blind
+  decisions are typed: FALLBACK is `blind_fallback`; COPY is `blind_copy_rescue` when the
+  sibling's shot is one of the rescues, else `blind_copy`; none is exempt from the daily budget.
+  A held zone that is not firing publishes the hold as its `block`, so the zone status and
+  `current_decision` still show it.
+- **Integration, plan** (`strategy.py`): `tick` applies the latest lights-on on the first tick
+  that can (`_advance`), not only within 120 s of it. `activate` / `disarm` record
+  `armed_at` / `disarm_at`, which take effect at the first lights-on after them by the current
+  `lights_on_hour` (`_due`), so a changed hour re-anchors them; a day already applied is never
+  applied again (`grow_day >= day`), and a later hour never takes the plan back a day. Lights-on
+  is built per local date and compared in UTC (`_lights_on`, `_boundary`, `_next_boundary`): an
+  hour inside a daylight-saving gap is the instant the clocks jump to, and `now - boundary` no
+  longer compares wall clocks across a change. A recoverable fault (stale heartbeat, flag, zone
+  switch or probe at lights-on, a failing hydraulic preview, an unreadable `lights_on_hour`,
+  storage) keeps the last valid snapshot published and sets `degraded_reason` (a plan sensor
+  attribute and a `strategy_get` response field), retried every tick. Only zones that no longer
+  match the plan (or an archived room) are an error (`_Hold`), stored once instead of every
+  minute. `async_init` no longer turns a missed lights-on into an error. The response's
+  `armed_after` / `disarm_after` are computed from `armed_at` / `disarm_at` by the current hour.
+- **Integration, setup** (`setup_api.py`): `safety_blockers` adds `_plan_blocker`: with a
+  proposal, a change of the active zone set or archiving the room is refused while the plan is
+  armed, active, disarming or in error. A change back to the plan's own zones is allowed.
+  `remove_setup` passes its archive as the proposal. Covers `save_setup`, `remove_setup`, the
+  options flow's zone map and `.env` reload.
+- **Integration, Repairs** (`health.py`): `strategy_hold` (ERROR: plan status `error`, or a fresh
+  heartbeat's `strategy_error`; WARNING: a zone the active plan does not steer today) and
+  `strategy_degraded` (WARNING: `degraded_reason`), with `{reason}`; both cleared with the room's
+  other cards when it is switched off. Translations in `strings.json` and `translations/en.json`.
+- **Existing installs:** no state-file, option or entity-id change. A plan document stored by an
+  older version (no `armed_at` / `disarm_at`) keeps working from its `armed_after` /
+  `disarm_after`, and one stored in error with "Lights-on boundary was missed" applies its day on
+  the first tick. An older controller with this integration sees fewer holds; this controller
+  with an older integration still waters the rescues through its holds.
+- **Tests:** `crop-steering-engine/tests/test_steering_held.py`,
+  `addons/f2_control/tests/test_plan_hold_never_stops_rescues.py`,
+  `tests/test_plan_never_holds_a_room_all_day.py` (stale heartbeat or probe at lights-on, Home
+  Assistant down across it, the lights-on hour moved later and earlier, the Pacific/Auckland gap
+  on 27 September 2026, a zone change while armed), new cards in `tests/test_health.py`, and
+  `tests_ha/test_plan_holds.py` (the options flow refusing a zone change under an armed plan and
+  saving it under a draft; every hold, and a plan that could not apply its day, in the real
+  Repairs registry). `test_active_store_survives_reload_without_midday_reapplication` now asserts
+  the stored snapshot stays active with a `degraded_reason` where it asserted the error, and
+  `test_disarm_waits_for_next_boundary_and_survives_missed_boundary_restart` that the missed
+  release is made on the first tick.
+- **Zone status, one writer** (class C3: controller and integration). The controller publishes
+  `sensor.crop_steering_<prefix>zone_N_status_app` (state: the `zone_status_label`; attributes
+  `reason`, `friendly_name`, `engine`), `Room off` included, and no longer writes `zone_N_status`.
+  The integration's `zone_N_status` (`CropSteeringZoneStatusSensor`, same unique id and entity id)
+  mirrors it through `zone_status.mirrored_status`: the label and its reason, or
+  `Controller not reporting` when the app entity is missing, `unknown`/`unavailable`, or its
+  `last_reported` (else `last_updated`) is more than 10 minutes old, the engine-offline repair's
+  limit. It is not polled: it updates on the app entity's `state_changed` and checks staleness
+  every minute, and writes only when what it shows changes, so a 0.16.x controller still writing
+  `zone_N_status` is left alone rather than overwritten every 30 s. With a controller from this
+  release and an older integration, `zone_N_status` shows that integration's threshold label.
+  `VWC_DRY_THRESHOLD` / `VWC_SATURATED_THRESHOLD` removed from `const.py`. The label and reason
+  are now recorded on both entities; exclude `sensor.crop_steering_*_status_app` from the
+  recorder to keep one copy. Tests: `tests/test_zone_status.py`,
+  `addons/f2_control/tests/test_zone_status_one_owner.py`,
+  `tests_ha/test_zone_status_one_owner.py` (an older controller's writes are not fought; with this
+  controller there is exactly one writer). The two add-on tests that asserted the controller
+  writing `zone_N_status` now assert `zone_N_status_app`.
 
-## [2.20.1] - 2026-09-21
+## [2.19.4] - 2026-09-23
 
-Pair: **controller 0.17.0**. Class **C3**. Three changes, each its own pull request with its own
-tests (#25, #26, #27), all from the same evening on the first real install: Home Assistant had
-been running stale code, so the integration was deleted and set up again, twice, and each step of
-that went wrong in its own way. **This candidate carries more than one behaviour change** (one C3,
-two C2), which [docs/RELEASING.md](docs/RELEASING.md) says a candidate should not; they were
-bundled by decision of the person running the only staging room. The failures were seen on a real
-install; **the fixes have not run on hardware** before release. Update with the engine off, and
-**restart Home Assistant after the HACS update**: from this version on, setup tells you if you
-have not.
-
-**There is no 2.20.0.** The tag `v2.20.0` was published by mistake on the commit *before* this
-release was cut: the same code, but still calling itself 2.19.2 / controller 0.16.2, with no
-changelog. A version number is never reused for different code, so that tag stays where it is and
-this release is 2.20.1. If HACS installed 2.20.0 for you, the dashboard and the setup screens say
-2.19.2; update to 2.20.1.
+Pair: **controller 0.16.4** (no controller code change: it serves the 2.19.4 dashboard). Class **C1**:
+dashboard only, nothing the controller or the integration reads. **Owner-approved rehearsal release** (the owner,
+23 September 2026), no staging photoperiod; see the release audit.
 
 ### 🌱 In plain English
 
-- **Setup tells you which version is really running.** HACS downloads an update, but Home
-  Assistant keeps running the old code until it restarts, and until now nothing said so. The
-  first setup screen, the add-a-room screen and the *Configure* menu now show "Running: Crop
-  Steering 2.20.1". And if a different version is sitting on disk waiting for a restart, **setup
-  will not create a room at all**: it stops and says "restart Home Assistant, then add Crop
-  Steering again". A room made by stale code keeps whatever that code created, entity names
-  included, for life; refusing is kinder. *Configure* is never blocked (someone with a growing
-  room has to be able to get in); it shows the same warning instead.
-- **A room you delete and set up again starts fresh.** Home Assistant remembers the last value of
-  a deleted entity for seven days, and this integration always uses the same entity ids, so a
-  second attempt at setup quietly inherited the first: its settings (over the answers you had
-  just typed: lights 07:00-20:00 came back as 12:00-00:00), its room on/off switch, and its
-  **kill switch**. A room deleted while its engine was enabled came back with its engine
-  enabled. Now a room only takes back values that were saved after that room was created. An
-  existing room restarts exactly as it always has.
-- **The controller notices when the room behind it has been replaced.** It kept running while the
-  integration was deleted and set up again, and went on driving the room that no longer existed:
-  the new room's setup counter starts again at 1, and the controller only takes on a setup
-  numbered higher than the one it holds. With a different valve in the new room, enabling it
-  would have watered through the **old** valve. The integration now says which room it is, and
-  when that changes the controller takes the new setup on, through the same safety gate as any
-  setup change: the kill switch and every switch of both the old and the new map must read OFF
-  first.
+- **The dashboard says when the controller is not running.** After a Home Assistant restart with
+  the controller app stopped, its heartbeat simply disappears, and the dashboard looked normal:
+  only a heartbeat that was present but old raised a yellow warning. A room that is switched on
+  now raises a red *Controller not running* notice whenever the heartbeat is missing, unreadable
+  or more than five minutes old, and its zone phases and statuses are marked *Stale*.
+- **A status line on every page, for every room.** It says whether the room is watering, holding
+  and why, or not watering and what to do about it (engine switched off, a setup change waiting to
+  be adopted, stuck hardware, a grow plan hold, the controller stopped), and how old the
+  controller's last report is: amber after two minutes, red after ten. Phones show it too.
+- **Red notices are never pushed off the Overview.** Notices are ordered red, then yellow, then
+  information. The Overview showed the first three in the order they were raised, so an
+  information notice could hide a red one; every red notice is shown now. Zones with the same
+  problem share one notice.
+- **Zone status follows the controller.** Two writers share the zone status sensor. While the
+  controller is running, the dashboard shows the controller's phase-aware status, and it never
+  shows the integration's fixed-threshold *Dry - Needs Water* during P3, where drying back
+  overnight is the plan.
+- **The dashboard no longer downloads all of Home Assistant twice a minute.** Inside Home
+  Assistant it fetched every entity (3.3 MB on a large install) every 30 seconds for each open
+  tab, twice more for every change you applied, and kept going in a hidden tab. It now downloads
+  once when it opens, then receives only changes to the few hundred entities it shows, as they
+  happen, over Home Assistant's own connection. Opened on its own, outside Home Assistant, it
+  still checks every 30 seconds, but not while the tab is hidden, and at once when you come back.
+  Recorded sensor history loads its window once, then only the newest readings each minute.
 
 ### 🔧 Technical notes
 
-- **Version in the config flow** (#27, **C2**). `SOFTWARE_VERSION` of the *loaded* module is shown
-  through `description_placeholders` on `config.step.user`, `config.step.room` and
-  `options.step.init`. `_installed_version()` reads `manifest.json` from disk in the executor; when
-  it differs from the running version the flow aborts with the new `config.abort.restart_required`
-  at the top of `async_step_user`, which covers the first room, an additional room and creation
-  through the setup API. An unreadable manifest stops nobody.
-- **A re-created room does not inherit** (#25, **C2**). `room.restored_state_is_ours(entry,
-  last_state)`: `last_state.last_updated >= entry.created_at`, used by the number, switch and
-  select platforms in `async_added_to_hass`. Home Assistant keeps a removed entity's state for
-  `restore_state.STATE_EXPIRATION` (7 days), keyed by entity id. Conservative on purpose: an entry
-  from before Home Assistant recorded `created_at` carries the epoch, and where either time is
-  missing or they cannot be compared, the state **is** restored.
-- **The controller adopts a re-created room** (#26, **C3**). The descriptor gains `entry_id`
-  (additive, and like `integration_version` not one of the keys the setup fingerprint reads).
-  `Controller._is_another_room()` re-opens adoption when it changes and nothing more: the existing
-  gate still applies to both maps. A different room is never *resumed* after a restart, however
-  alike it looks. First sight of an `entry_id` (the integration updated under a running room, or
-  a state file from 0.16.x) is remembered, written down, and changes nothing. `_setup` in the
-  state file gains an optional `entry_id`.
-- **Upgrade in place.** No entity id and no add-on option changes. One optional state-file key and
-  one additive descriptor attribute; a restart on a 0.16.2 state file resumes **without a disarm
-  cycle** (tested, as is the descriptor's fingerprint staying exactly what 0.15.1 computed for
-  the seeded 2.18 tent). Every change is tested on a fresh install and from the seeded snapshots
-  in `tests_ha/fixtures/`.
-- **What these cannot do.** A controller that has never seen an `entry_id` has nothing to compare
-  the first one with, so a re-setup done in the same breath as this update is still missed until
-  the controller restarts. And an install whose *running* code is older than this release has no
-  version on its setup screens: [docs/troubleshooting.md](docs/troubleshooting.md) says what that
-  means (restart first).
+- Dashboard (class C1, nothing the controller or integration reads): new
+  `frontend/src/lib/controller-health.ts`. `readHeartbeat` dates a beat by the heartbeat's
+  `last_updated` (UTC, the clock the integration's health check uses), falling back to the naive
+  local `last_beat`; missing, unreadable (no usable time, or `unknown`/`unavailable`) and older
+  than 5 min all count as not running. `controllerZoneLabel` mirrors `zone_status_label` in
+  `crop_steering_engine/core.py`, rebuilt from the zone phase and its `reason` and
+  `current_decision` `fired`/`blocked`; it is used while the heartbeat is fresh and the status
+  sensor holds the integration's value (no `reason` attribute).
+- `model.ts`: `buildRoom` raises `<room>-controller` (critical) in place of
+  `<room>-stale-heartbeat` (warning), sets `Zone.stale`, merges identical per-zone notices into
+  one (`zones-1-2-3-sensors`, no `zoneId`) and sorts alerts critical > warning > info. New
+  `roomStatus()` (the status line, rendered by `components/status-line.tsx` above
+  `RoomOffBanner`) and `leadingNotices()` (Overview: every critical, then up to three).
+- Demo: heartbeats carry `last_beat` and are restamped on each demo refresh; each demo room
+  publishes `app_status` and `current_decision`; demo zone statuses carry a `reason` like the
+  controller's.
+- Dashboard (class C1, nothing the controller or integration reads): new
+  `frontend/src/lib/live.ts`. Inside the Home Assistant iframe (parent `hass.connection`),
+  `/api/states` is fetched once for discovery (again only on Refresh, after a Setup or plan change,
+  and on a websocket reconnect), then `subscribe_entities` covers `watchedEntities()`: every
+  `*.crop_steering_*` entity, what room descriptors and heartbeats point at (kill switches, pumps,
+  valves, tank and feed sensors), and the controller's per-zone sensors even before it has posted
+  them. `applyEntityUpdate()` applies the compressed events; updates are published in 250 ms
+  batches. A socket down for two 30 s ticks shows the offline banner; a refused subscription
+  falls back to polling. Standalone: `whileVisible()` polls every 30 s only while the page is
+  visible and refreshes on `visibilitychange`/`focus` (at most once per 10 s).
+- Writes no longer fetch all states before and after: the preflight and the readback read only
+  the written entities (`GET /api/states/<id>`) and merge them, never over a newer state.
+- `sensor-context`: the 72–168 h window loads once; each minute `historySpan()` asks only for the
+  time since the last load plus two minutes, and `mergeSeries()` folds it in.
+- Known limit: a room or zone created from Home Assistant's own integration pages, not this
+  dashboard's Setup, appears after Refresh, a reload or a Home Assistant reconnect.
+
+## [2.19.3] - 2026-09-23
+
+Pair: **controller 0.16.3**. **Owner-approved rehearsal release, no staging soak**: the owner
+approved releasing on 23 September 2026 ("do all of it now") after the F2 dry tails of 21-22 September; the
+release audit on the GitHub release names what was and was not exercised. Update with the engine off, read
+the controller log, then watch the first shots.
+
+The irrigation changes (controller and engine) are class **C3**, from the F2 history of 21-22 September
+2026 and the review of it.
+**Not run on hardware.** No add-on option changes. The state file gains three additive keys that the
+previous controller ignores, so it can still read the file after a rollback.
+
+### 🌱 In plain English
+
+- **A room deleted and set up again starts fresh.** Home Assistant keeps the last state of a removed
+  entity for seven days, and a re-created room inherited the deleted one's settings, its room on/off
+  switch and its kill switch: a room deleted while armed came back armed. Now a room only takes back
+  values saved after it was created. An existing room restarts exactly as before.
+- **The controller adopts a re-created room afresh.** It used to go on driving the room that no longer
+  existed: with a different valve in the new room, arming it would have watered through the **old**
+  valve. The integration now says which room it is, and a new room is adopted through the usual gate
+  (kill switch and hardware OFF first).
+- **Setup shows the version that is running, and waits for a restart.** After a HACS download Home
+  Assistant keeps running the old code until it restarts; setup now says which version is running and
+  will not create a room on stale code. *Configure* is never blocked.
+- **Tested against the Home Assistant you run.** The real-Home-Assistant tests now run on HA 2026.9.3
+  (Python 3.14) and on the oldest version supported, now **2024.10.0** (2024.3 never passed).
+- **One repository.** The controller app is now installed only from this repository. The old
+  `f2-control` mirror, which a release script pushed a copy to, is retired: it gets no more
+  releases, and nothing in this repository writes to it. A controller installed from the mirror
+  moves once; [docs/INSTALL.md](docs/INSTALL.md) has the steps, which carry its learned state and
+  settings across. Never run the old and the new app at the same time.
+- **Only an administrator can change plans, recipes and run records.** The Crop Steering sidebar
+  is open to every Home Assistant login, and until now so was everything it can change: any
+  login, a staff phone or the hallway kiosk, could arm a plan with a future start date (which
+  holds every zone), disarm the plan that is running, or replace every room's recipe. Through
+  the Crop Steering actions, which is what the sidebar uses, saving, arming and disarming plans,
+  changing run records and recipes, holding a zone, forcing a phase and requesting a shot now
+  need an administrator's login, as room setup already did. Everyone else can still open the
+  sidebar and look. **Automations are not affected**: they run with no login of their own, even
+  when a person set them off. A script that someone who is not an administrator starts from a
+  dashboard is refused, like that person. Not changed: the room's own switches, selectors and
+  numbers (a zone's hold switch, the phase selector, a setpoint) are Home Assistant entities and
+  still follow Home Assistant's own permissions, so an ordinary login can still change those.
+- **A zone that has used its day's water can still be rescued.** On 22 September Zone 1 had no water
+  from 14:06 until lights-off with its moisture under the re-water line: the daily limit was reached
+  by midday, and the limit also stopped the "no water for 3 hours" safety shot. That safety shot, the
+  overnight emergency shot and the high-EC flushes now always pass the daily limit. Routine top-ups and
+  EC-correction shots stop at it, and a shot that would cross it gets only what is left, not a ten
+  minute shot with two litres of budget remaining.
+- **The morning ramp always finishes, and never waits all day.** P1 runs in full whatever it is set
+  to: it stops at its target or its maximum number of shots, not at the daily limit. Once the zone is
+  full and only pore EC is keeping the ramp open, a spent budget ends the ramp instead of holding the
+  zone in P1 with nothing it is allowed to fire.
+- **Pore EC is read when it means something.** For the first 45 minutes after a shot the probe reads
+  the fresh water passing it (6 to 8 mS/cm during the 22 September ramps, on zones that read about 4.5
+  when left alone). Every EC decision now uses the last reading taken at least 45 minutes after a shot,
+  so a passing spike no longer keeps the ramp flushing, doubles a shot or fires a flush, and an EC
+  flush waits for the next such reading before it is repeated.
+- **No safety shot at lights-on.** The whole night counted as "3 hours without water", so every zone
+  got a safety shot the moment the lights came on, before its morning dry-back. The dry-back now comes
+  first, as intended.
+- **A restart after lights-on starts a proper day.** If the controller was not running when the lights
+  went off (a reboot left it stopped), it came back in yesterday's P2 with yesterday's water already
+  counted, and watered nothing all day. It now starts the day at P0 with its own budget.
+- **A shot interrupted by a crash is closed at the next start, and nothing else is.** Before opening
+  anything the controller writes down what a shot is about to open. If it dies mid-shot, or loses Home
+  Assistant during the close, its next loop closes exactly that valve, main line and pump. **It never
+  switches anything off on a timer or on suspicion.** The tank is circulated for well over 20 minutes to
+  heat it, and zones are hand-watered with the valves and main line open: anything a person has
+  switched since the shot started is theirs and is left alone, together with everything upstream of
+  it; the pump is left alone while a hold (dosing, fill, flush, circulation) is on or another valve on
+  the line is open; and nothing at all is touched while the room's kill switch is off.
+- **Stopping or updating the app no longer switches everything off.** It used to switch off every pump
+  and valve it knew, which ended tank circulation and hand-watering whenever the app was stopped,
+  updated or restarted. Now it closes only the shot it has running, by the same rules as above, and
+  counts the water that shot gave. With no shot running it switches nothing off. A pump that reports
+  OFF a second late no longer latches a false hardware hold after a failed shot either (the
+  15 September problem, on the one path the earlier fix missed).
+- **A critical alert raised while Home Assistant is unreachable is not lost.** It is raised again until
+  Home Assistant has it; the 30-minute quiet period starts only then.
+
+### 🔧 Technical notes
+
+- #49 `room.restored_state_is_ours(entry, last_state)` (`last_state.last_updated >= entry.created_at`,
+  lenient when either is missing or naive) gates restore in the number, switch and select platforms.
+- #50 the descriptor gains `entry_id` (not a fingerprint key); `Controller._is_another_room` re-opens
+  adoption when it changes; first sight is remembered and changes nothing; `_setup` gains optional
+  `entry_id`.
+- #51 `config.step.user`/`room` and `options.step.init` show `SOFTWARE_VERSION`; `async_step_user` aborts
+  `restart_required` while the on-disk `manifest.json` differs (read in the executor).
+- #56 Validate: `Real Home Assistant` legs pinned (HA 2026.9.3 / plugin 0.13.366 / Python 3.14; HA
+  2024.10.0 / Python 3.12) with a version assertion; `tests/run_ci.sh` ends `PARTIAL` (exit 1 unless
+  `--allow-skip`) when that tier is skipped; minimum in `hacs.json`, README and INSTALL raised to 2024.10.0.
+- `addons/f2_control/config.yaml` `url` points at this repository (metadata only; version unchanged).
+- Removed `scripts/prepare_addon_release.py`, `scripts/publish_addon.sh` and
+  `tests/test_addon_release.py`, the publisher for the mirror. The add-on's web root is already
+  written by `frontend/scripts/package.mjs` and checked by `tests/test_dashboard_layout.py` and
+  the Validate bundle check, so nothing it verified goes unchecked.
+- New section in `docs/INSTALL.md`: moving an app from `4d457e60_f2_control` (mirror) to
+  `6db5faba_f2_control` (this repository), copying `/data/state.json` and the options.
+- New `custom_components/crop_steering/admin.py` `async_require_admin`: the one administrator
+  check, extracted from `setup_api.py`. It now also runs before every state-changing service:
+  `strategy_save`, `strategy_activate`, `strategy_disarm`, `runs_save`, `runs_archive`,
+  `runs_import`, `save_recipe`, `apply_recipe`, `set_manual_override`, `transition_phase`,
+  `execute_irrigation_shot` and `custom_shot`. Read-only services stay open: `strategy_get`,
+  `strategy_preview`, `runs_get`, `check_transition_conditions`. New services are checked by
+  default (the read-only ones are listed, not the others). Entity services on the integration's
+  own entities (`switch.crop_steering_zone_N_manual_override`, `select.crop_steering_irrigation_phase`,
+  `select.crop_steering_recipe_stage`, the numbers, the engine switch) are not covered; Home
+  Assistant's entity permissions govern those, and its Users group may control every entity.
+- Semantics are those of Home Assistant's own admin services: `context.user_id` empty passes, an
+  unknown user id or a non-admin is refused. `setup_*` keep their stricter rule (no user is
+  refused too) and their message. The panel stays `require_admin=False`.
+- Refusals raise `HomeAssistantError("crop_steering.<service> requires an authenticated Home
+  Assistant administrator")`, the type setup already used, not `Unauthorized`: over the REST API
+  the console uses, `Unauthorized` is a bare 401 that the http ban middleware counts as a failed
+  login (notification, then an IP ban at `login_attempts_threshold`).
+- `services.yaml` says so on each checked service. Tests: `tests/test_admin_only.py` (every
+  service; administrator, non-administrator, unknown user and no user) and
+  `tests_ha/test_non_admin_user.py` (a real Users-group account, and a real automation it sets
+  off). The `tests/` call stand-ins for `services.py` now carry a no-user context, as a real
+  `ServiceCall` always has one.
+- **Typed decisions (engine).** `decide()` still returns `(phase, p2_threshold, fire, size, reason)`;
+  `reason` is a `Reason(str)` with `.kind` and `.cap_exempt` (`CAP_EXEMPT`). Exempt: `flush_high_ec`,
+  `p1_ramp`, `p2_rescue`, `p3_emergency`, `watchdog`. Not exempt: `p0_ec_flush`, `p1_flush`, `p2_dilute`,
+  `p2_topup`, `min_daily`. Non-firing: `idle`, `block_high_ec`, `hold_high_ec`, `block_daily_cap`. This
+  replaces the substring test (`"flush" in ir`) that made every "P1 flush/runoff" shot an emergency.
+- **Cap -> watchdog.** A non-exempt shot cancelled by the cap becomes the watchdog shot (`p2_shot_size`,
+  kind `watchdog`) when the watchdog is due: lights on, not P0, more than `watchdog_hours` since the last
+  shot, VWC under the P2 threshold. The watchdog no longer fires in P0.
+- **P1 completion over budget.** P1 at `min(p1_target, field_capacity)` with `p1_minimum_shots` in and
+  `daily_vol >= max_daily_volume` goes to P2: `P1 complete at ceiling; EC flush over daily budget`.
+- **P0 EC flush** gated like the other flushes (feed below pore EC, VWC < FC - 2, `p2_min_interval_min`);
+  not exempt.
+- **New grow-day in any phase.** P1/P2 with `lights_on and new_grow_day` goes to P0 (`new grow-day -> P0
+  (reset)`) and the existing P0 bookkeeping resets the counters. From P1/P2 this needs a dated
+  `last_daily_reset` older than the grow-day start, so a fresh zone is never restarted mid-day. Blind
+  zones follow the same rule in `_blind_time_transition`.
+- **Settled EC.** New last field `ZoneSnapshot.ec_settled` (default `None`); every EC rule uses it when
+  present. `EC_SETTLE_MIN = 45`. `_settled_ec` takes the fused reading as settled 45 min after the last
+  shot ended (a switch-on anchor is not a shot), holds the last settled value in between, and passes
+  `None` while the probe reads nothing valid. Only settled readings feed `ec_smooth`, so the EC step /
+  PID. An EC correction acting on a settled value (anti-lockout, P0/P1 flush, P2 rescue/dilute) also
+  waits 45 min after the last shot: a held value can never re-fire a cap-exempt flush every 10 minutes.
+  The P1 EC-gate helper and the Jev evidence in `_auto_tick` use the same value. Published as
+  `ec_settled` on `sensor.crop_steering_<room>zone_N_safety_status`.
+- **EC offset at lights-on.** `_loop_room` clears `ec_offset`, the integral and the previous error
+  before it builds the parameters for the tick that starts the zone's day.
+- **Budget clipping (controller).** `_act_zone` cuts a non-exempt shot to the remaining budget at the
+  zone's flow; under `MIN_SHOT_S` (5 s) it does not fire and publishes `BLOCK daily-cap (x L left)`.
+  When less than a minimum shot is left, `_loop_room` decides again with the budget spent, so the
+  watchdog rescue and P1 completion apply at the margin too. Copied and blind-schedule decisions are
+  plain text and never exempt.
+- **Write-ahead shot record.** `_execute_shot` saves `_shot_inflight` (zone, valve, mainline, pump,
+  `started` in UTC) in the room's state block before opening anything and clears it once the close
+  reads back OFF. `_reconcile_inflight` runs at the top of every loop, so at start-up: it closes a
+  recorded switch only if Home Assistant's `last_changed` is within `INFLIGHT_OPEN_WINDOW_S` (-5 s to
+  +60 s) of `started`, walking valve -> main line -> pump and stopping at the first switch that changed
+  outside it; it leaves the main line and pump while another valve on the line is on, the pump while
+  any `hold_entities` is on, and everything while the room's kill switch is not ON. A close that is not
+  confirmed latches the hardware hold and alerts, and is retried each loop. A new shot in that room
+  waits until the record is settled. `ha_get` returns `HAState`, a tuple that unpacks as before and
+  carries `last_changed`.
+- **Stopping the app.** `_safe_off` (SIGTERM / SIGINT: stop, update, restart) no longer switches off
+  every mapped switch. It closes only a room's `_shot_inflight`, by the same `_inflight_plan` rules, and
+  with no shot in flight it switches nothing off. The shot running in this process is closed whatever
+  its kill switch reads; an older interrupted shot is left to the operator while its kill switch is not
+  ON, as in the loop. What cannot be closed and read back OFF stays recorded for the next start. State
+  is still saved on the way out.
+- **Alerts.** `_alert` starts the 30-minute debounce, and sends the phone push, only once
+  `persistent_notification.create` succeeds. A latched hardware hold this process has not announced is
+  announced from `_recover_hardware_faults`.
+- **Shot cleanup and stop.** The error-cleanup read-back uses `_confirm_switches` (1 s, then every
+  0.5 s to 6 s). A `SystemExit` mid-shot counts `nominal_l * elapsed / duration` before re-raising
+  (up to the end of the stop's close, like the normal close counts to its acknowledgement), and skips
+  the error cleanup, which would otherwise switch the rest off.
+- **State file.** Additive: `_shot_inflight` in a room block, `ec_settled` and `ec_settled_at` per zone.
+  The previous controller (0.16.2) loads the new file: it ignores the new keys, keeps the room-block one
+  when it saves and drops the two zone keys. An old file loads with the new keys at their defaults; a
+  damaged record is ignored and logged.
+- **Tests.** Engine: `crop-steering-engine/tests/test_day_structure.py` (32). Controller:
+  `test_grow_day_and_budget.py` (15) and `test_interrupted_shot.py` (22). In `test_auto_setpoints.py`
+  the plateau hand-over margin is now one 20-minute ramp interval instead of 0.5 h: the base run no
+  longer includes the P0 lights-on watchdog shot that delayed it. `test_declared_plumbing.py`: a mapped
+  pump is closed on exit when a shot of this controller left it on, and left alone otherwise (it
+  asserted the old blanket switch-off). `fake_ha.FakeHA` reports
+  `last_changed`. The `tests_ha/` tier was not run locally, and no `tests_ha/` test or seeded fixture was
+  added for this change yet.
 
 ## [2.19.2] - 2026-09-21
 
@@ -296,12 +555,6 @@ carries more than one behaviour change** (two C3, four C2), which
 of the person running the only staging room, and a failed soak would have to be bisected across
 them. The defects were seen on real hardware; **the fixes have not run on hardware** before
 release. Update with the engine off, read the controller log, then watch the first shot.
-
-> **On this fork, read this entry together with 2.20.2.** The *switching a room on* and *zones are
-> never invented* items below carry upstream's wording, brought in by the 2.20.2 intake. Upstream's
-> 2.19.2 contains its final-review fixes; **this fork's `v2.19.2` tag does not**. Here the old-file
-> guess and the zone list that could settle on a half-started Home Assistant shipped in 2.19.2,
-> 2.20.0 and 2.20.1, and were fixed in 2.20.2 / controller 0.17.1.
 
 ### 🌱 In plain English
 
@@ -869,8 +1122,8 @@ the only engine for a while, and keeping the dead code around made the docs clai
 system doesn't do. The README is corrected to match the actual code: the self-tuning "Vmax / adaptive
 steering" section is gone (it was never in the live engine), the dashboard tab names and the safety
 gate chain are fixed, and overstated claims (a `>4 h` self-healing watchdog, daily *shot-count* caps,
-`?room=` dashboard scoping) are reworded to what's real. New **[`SYSTEM_GUIDE.html`](archive/2026-09-08/SYSTEM_GUIDE.html)**
-(feature list + flowcharts) and **[`docs/DASHBOARDS.md`](archive/2026-09-08/docs/DASHBOARDS.md)** (what's wired, what's
+`?room=` dashboard scoping) are reworded to what's real. New **[`SYSTEM_GUIDE.html`](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy/blob/archive/2026-09-08/released-workspace/archive/2026-09-08/SYSTEM_GUIDE.html)**
+(feature list + flowcharts) and **[`docs/DASHBOARDS.md`](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy/blob/archive/2026-09-08/released-workspace/archive/2026-09-08/docs/DASHBOARDS.md)** (what's wired, what's
 hardcoded to F2, and how to populate the dashboards for your own facility).
 
 **🔧 Technical notes.**
@@ -1396,7 +1649,7 @@ integration. README, CLAUDE.md and docs/SYSTEM_OVERVIEW.md rewritten to match.
 ### Removed — undeployed experimental layers
 The `intelligence/` subsystem (RootSense substrate AI + ClimateSense climate
 control) was never deployed and has been removed from `main`, along with its tests,
-the F1/Green Wave `legacyag` dashboards, the `docs/upgrade/` planning docs, and the
+the facility-specific F1 dashboards, the `docs/upgrade/` planning docs, and the
 lean `crop_steering_v2` controller. All recoverable from the
 `archive/pre-doc-cleanup-2026-06` tag.
 
@@ -1459,7 +1712,7 @@ lean `crop_steering_v2` controller. All recoverable from the
   dataclass field didn't exist).
 
 ### Added (Dashboard wiring)
-- New "LLM Advisor" view in `dashboards/legacyag/30_intelligence.yaml`:
+- New "LLM Advisor" view in the facility's `30_intelligence.yaml` dashboard:
   pillar status, latest triage tag, full report payload as
   syntax-highlighted markdown, 7-day token-size + triage-history
   graphs.
@@ -1613,7 +1866,7 @@ intelligence/climate/
   -2.0` documented inline.
 
 ### Added (Dashboards)
-- New `Recipe` view in `dashboards/legacyag/40_setpoints.yaml` —
+- New `Recipe` view in the facility's `40_setpoints.yaml` dashboard —
   active phase + day-in-grow + DLI today/predicted + the 5
   ClimateSense module switches + measured-vs-recipe-target overlay.
 - Recorder package extended with all `sensor.climate_target_*`
@@ -1655,7 +1908,7 @@ intelligence/climate/
   step-by-step rollout sequence, rollback path, and troubleshooting.
 
 ### Added (Linked F1 dashboard suite)
-- Five linked Lovelace dashboards under `dashboards/legacyag/`,
+- Five linked Lovelace dashboards for the first facility,
   built on the existing `custom:agency-sensor-analytics-card` that
   the live F1 install already uses. Replaces the earlier
   history-graph-card prototype (`rootsense_history.yaml`) which

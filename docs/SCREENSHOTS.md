@@ -2,11 +2,11 @@
 
 [Open the interactive demo](https://jaketherabbit.github.io/HA-Irrigation-Strategy/dashboard.html?demo=1).
 
-Captured on 20 September 2026 (tank panel: 8 September) from the compiled application with isolated demo data and inherited Home Assistant dark-theme variables. These are current UI examples, not photographs or live facility readings.
+Captured on 25 September 2026 from the compiled application with isolated demo data and inherited Home Assistant dark-theme variables. These are current UI examples, not photographs or live facility readings.
 
-## Room overview
+## Overview
 
-![Room overview](../img/operator-dashboard.png)
+![Overview](../img/operator-dashboard.png)
 
 ## Tank and pump
 
@@ -48,4 +48,4 @@ Captured on 20 September 2026 (tank panel: 8 September) from the compiled applic
 
 ![Mobile room overview](../img/mobile-overview.png)
 
-Reproduce these captures with `node frontend/scripts/verify-workspace.mjs` and `node frontend/scripts/verify-steering-visuals.mjs` after building the frontend. Historical screenshots live in archive/2026-09-08/img.
+Reproduce these captures with `node frontend/scripts/verify-workspace.mjs` and `node frontend/scripts/verify-steering-visuals.mjs` after building the frontend. Historical screenshots are kept in the `archive/2026-09-08/released-workspace` tag, under archive/2026-09-08/img.

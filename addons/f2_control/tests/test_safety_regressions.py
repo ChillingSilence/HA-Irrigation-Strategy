@@ -129,6 +129,11 @@ def test_blind_fallback_and_sibling_copy_stop_at_own_daily_cap(rig, healthy_sibl
                    for dom, svc, data in fake.calls)
     if healthy_sibling:
         assert pub[2]["fire"] is True  # preserve the LIVE probe emergency exception
+    # CS-205 must not promise this zone the rescue shots a zone with a working probe keeps.
+    card = next(d for dom, svc, d in fake.calls if (dom, svc) == ("persistent_notification", "create")
+                and d["notification_id"] == "f2_block_default_z1")
+    assert "gets no more water until lights-on" in card["message"]
+    assert "still run" not in card["message"]
 
 
 def _fail_valve_close(monkeypatch, fake, mode="on"):
@@ -434,3 +439,23 @@ def test_inflight_sizing_edits_do_not_rewrite_delivered_litres(rig, monkeypatch)
                 None, True, datetime.now())
     assert room.state[1]["daily_vol"] == pytest.approx(42 * 4 / 3600 * 60)
     assert c._water_usage(room, 1, datetime.now())[0] == 2.8
+
+
+def test_a_second_hardware_hold_is_announced_after_the_first_is_cleared(rig):
+    """A cleared hold left its key in _alerted: a second hold within 30 minutes raised no card at
+    all (the recovery pass only re-announces a key that is missing), and the room stayed dry."""
+    c, fake, _clock = rig
+    room = c.rooms[0]
+
+    def cards():
+        return [d for dom, svc, d in fake.calls if (dom, svc) == ("persistent_notification", "create")
+                and d["notification_id"] == "f2_hardware_fault_default"]
+
+    c._latch_hardware_fault(room, "zone 1 valve/pump/mainline close not confirmed")
+    assert len(cards()) == 1
+    fake.set_state("input_boolean.kill", "off")  # the operator clears it: engine off, hardware off
+    c._recover_hardware_faults()
+    assert room.hardware_fault is None
+    fake.set_state("input_boolean.kill", "on")
+    c._latch_hardware_fault(room, "zone 2 valve/pump/mainline close not confirmed")
+    assert len(cards()) == 2 and "zone 2" in cards()[-1]["message"]

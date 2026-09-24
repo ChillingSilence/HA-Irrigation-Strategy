@@ -83,7 +83,7 @@ def test_an_off_room_still_reports_in_so_nothing_calls_the_engine_offline():
     c.loop_once(_Clock.now())
     state, attrs = fake.sets["sensor.crop_steering_ai_heartbeat"]
     assert state == "healthy" and attrs["room_active"] is False
-    assert fake.sets["sensor.crop_steering_zone_1_status"][0] == "Room off"
+    assert fake.sets["sensor.crop_steering_zone_1_status_app"][0] == "Room off"
     assert "Room off" in fake.sets["sensor.crop_steering_current_decision"][0]
 
 
@@ -163,4 +163,4 @@ def test_a_shot_in_flight_is_cut_when_the_room_is_switched_off(monkeypatch):
 
     monkeypatch.setattr(controller.time, "sleep", sleep)
     elapsed, aborted = c._wait_shot(c.rooms[0], 1, 60)
-    assert aborted is True and elapsed < 60
+    assert aborted == ("abort", ROOM_ACTIVE) and elapsed < 60
