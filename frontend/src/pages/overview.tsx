@@ -1,21 +1,12 @@
-import { DailyWaterSummary } from "@/components/water-delivery";
+import { DayTimeline } from "@/components/day-timeline";
 import { TankStatus } from "@/components/tank-status";
 import { useState } from "react";
-import { ArrowRight, ArrowUpRight, CircleCheck, TriangleAlert } from "lucide-react";
+import { ArrowRight, ArrowUpRight, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Controller, Zone } from "@/lib/types";
+import type { Controller } from "@/lib/types";
+import { leadingNotices } from "@/lib/model";
 import { RoomPower } from "@/components/room-controls";
-import {
-  Empty,
-  EventList,
-  Heading,
-  HistoryChart,
-  Metrics,
-  Status,
-  ZoneDetails,
-  ZoneTable,
-  type Page,
-} from "@/components/dashboard";
+import { Empty, Heading, Metrics, ZoneDetails, ZoneTable, type Page } from "@/components/dashboard";
 
 export function Overview({
   controller,
@@ -26,11 +17,11 @@ export function Overview({
 }) {
   const [selected, setSelected] = useState<number | null>(null);
   const room = controller.room;
+  const notices = leadingNotices(room.alerts);
   return (
     <>
       <Heading
-        title="Room overview"
-        description={`A clear view of ${room.room.name.toLowerCase()}: moisture, scheduling and recent activity.`}
+        title={controller.roomId ? `${room.room.name} overview` : "Overview"}
         action={
           <div className="heading-actions">
             <RoomPower controller={controller} />
@@ -40,29 +31,9 @@ export function Overview({
           </div>
         }
       />
-      <div className="room-summary">
-        <div>
-          <span className="eyebrow">Controller scheduling</span>
-          <div className="split-row">
-            <Status enabled={room.engine.enabled} />
-            <span className="muted">
-              {room.zones.filter((z) => z.enabled).length} of {room.zones.length} zones enabled
-            </span>
-          </div>
-        </div>
-        <p>
-          {!room.roomActive
-            ? "This room is off. Nothing will irrigate and no alerts are raised until it is switched back on."
-            : room.engine.enabled === true
-              ? "Follow zone readings and recorded activity below."
-              : room.engine.enabled === false
-                ? "Scheduling is paused. An active shot may still be running."
-                : "Connect a controller to see scheduling state."}
-        </p>
-      </div>
       {!!room.alerts.length && (
         <div className="attention-list">
-          {room.alerts.slice(0, 3).map((notice) => (
+          {notices.map((notice) => (
             <div className={`attention attention-${notice.severity}`} key={notice.id}>
               <TriangleAlert size={20} />
               <div>
@@ -76,67 +47,37 @@ export function Overview({
               )}
             </div>
           ))}
-          {room.alerts.length > 3 && (
+          {room.alerts.length > notices.length && (
             <Button variant="ghost" onClick={() => navigate("sensors")}>
-              Review {room.alerts.length - 3} more notices in Sensors <ArrowRight size={15} />
+              Review {room.alerts.length - notices.length} more notices in Sensors{" "}
+              <ArrowRight size={15} />
             </Button>
           )}
         </div>
       )}
       <Metrics metrics={room.metrics} />
-      <TankStatus controller={controller} onConfigure={() => navigate("setup")} />
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Zones at a glance</h2>
-            <p>Controller state, valve activity and the last recorded irrigation</p>
-          </div>
-          <Button variant="ghost" onClick={() => navigate("zones")}>
-            All zones <ArrowRight size={16} />
-          </Button>
-        </div>
-        {room.zones.length ? (
-          <ZoneTable zones={room.zones} onSelect={(zone) => setSelected(zone.id)} />
-        ) : (
-          <Empty
-            title="No zones discovered"
-            detail="Connect Home Assistant in Settings. Zones are discovered from the controller entities available to your account."
-            action={<Button onClick={() => navigate("settings")}>Open connection settings</Button>}
-          />
-        )}
-      </section>
-      <DailyWaterSummary controller={controller} />
-      <HistoryChart controller={controller} zones={room.zones} />
-      <div className="overview-bottom">
+      <DayTimeline controller={controller} />
+      <div className="overview-grid">
         <section className="panel">
           <div className="panel-heading">
-            <div>
-              <h2>Recent activity</h2>
-              <p>Latest controller records</p>
-            </div>
-            <Button variant="ghost" onClick={() => navigate("activity")}>
-              View activity <ArrowRight size={16} />
+            <h2>Zones at a glance</h2>
+            <Button variant="ghost" onClick={() => navigate("zones")}>
+              All zones <ArrowRight size={16} />
             </Button>
           </div>
-          <EventList events={room.events.slice(0, 5)} />
+          {room.zones.length ? (
+            <ZoneTable compact zones={room.zones} onSelect={(zone) => setSelected(zone.id)} />
+          ) : (
+            <Empty
+              title="No zones discovered"
+              detail="Connect Home Assistant in Settings. Zones are discovered from the controller entities available to your account."
+              action={
+                <Button onClick={() => navigate("settings")}>Open connection settings</Button>
+              }
+            />
+          )}
         </section>
-        <section className="panel next-panel">
-          <CircleCheck size={26} />
-          <h2>Your daily workflow</h2>
-          <p>
-            Check readings, inspect any zone that needs attention, then review strategy changes
-            before applying them.
-          </p>
-          <button onClick={() => navigate("zones")}>
-            Inspect individual zones <ArrowRight size={16} />
-          </button>
-          <button onClick={() => navigate("strategy")}>
-            Review irrigation settings <ArrowRight size={16} />
-          </button>
-          <button onClick={() => navigate("help")}>
-            Understand phases & metrics <ArrowRight size={16} />
-          </button>
-        </section>
+        <TankStatus controller={controller} onConfigure={() => navigate("setup")} />
       </div>
       <ZoneDetails
         controller={controller}

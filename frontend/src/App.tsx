@@ -38,6 +38,8 @@ import { useHaShell } from "@/lib/ha-shell";
 import { errorText } from "@/lib/utils";
 import { roomIsActive, runningVersions } from "@/lib/model";
 import { RoomOffBanner } from "@/components/room-controls";
+import { ActivityPanel } from "@/components/activity-panel";
+import { StatusLines } from "@/components/status-line";
 import { time, type Page } from "@/components/dashboard";
 import { Overview } from "@/pages/overview";
 import { Zones } from "@/pages/zones";
@@ -334,6 +336,7 @@ export default function App() {
                     : "Offline"}
             </span>
             <span className="last-updated">Updated {time(controller.lastUpdated)}</span>
+            <ActivityPanel controller={controller} openLog={() => navigate("activity")} />
             <Button
               variant="ghost"
               size="icon"
@@ -380,6 +383,7 @@ export default function App() {
                 )}
               </div>
             )}
+            <StatusLines controller={controller} />
             <RoomOffBanner controller={controller} />
             {page === "overview" && (
               <Overview key={controller.roomId} controller={controller} navigate={navigate} />

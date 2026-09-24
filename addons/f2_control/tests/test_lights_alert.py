@@ -62,10 +62,25 @@ def test_a_wizard_made_room_whose_operator_set_the_option_is_still_told(hours):
     """Somebody typed those hours. The engine is about to use different ones: say so."""
     options = {**SHIPPED, "lights_on_hour": hours[0], "lights_off_hour": hours[1]}
     (alert,) = _lights_alerts(_room(1), options)
-    assert "on at 7:00 and off at 20:00" in alert["message"] and f"{hours[0]}:00-{hours[1]}:00" in alert["message"]
+    assert "lights on at 7:00 and off at 20:00" in alert["message"]
+    assert f"still says {hours[0]}:00-{hours[1]}:00" in alert["message"]
 
 
 def test_a_legacy_room_is_still_told_even_on_the_shipped_hours():
     """UPGRADE IN PLACE. A legacy box may be growing on exactly 10-22 from the option."""
     (alert,) = _lights_alerts(_legacy_room(), SHIPPED)
     assert "10:00-22:00" in alert["message"]
+
+
+def test_one_unreadable_loop_keeps_the_integration_hours():
+    """Home Assistant restarting, an integration reload or a timed-out read made one loop fall back
+    to the app's option: at 08:30, with the integration on 7-20 and the option on 10-22, the room
+    read lights-off and was forced to P3, and the next loop's lights-on edge restarted its day."""
+    states = dict(_room(1))
+    states["number.crop_steering_lights_on_hour"] = ("7", {})
+    states["number.crop_steering_lights_off_hour"] = ("20", {})
+    c, fake = _build(dict(SHIPPED), states=states)
+    c.loop_once(datetime(2026, 9, 21, 8, 29))
+    fake.set_state("number.crop_steering_lights_on_hour", "unavailable")
+    c.loop_once(datetime(2026, 9, 21, 8, 30))
+    assert (c.rooms[0].lights_on_hour, c.rooms[0].lights_off_hour) == (7.0, 20.0)

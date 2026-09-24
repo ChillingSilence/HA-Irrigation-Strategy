@@ -103,7 +103,7 @@ match the globals above.
 | Entity | Range | Default | Unit | What it does |
 |---|---|---|---|---|
 | `zone_N_plant_count` | 1–50 | — | — | Plants in the zone — scales total water volume. |
-| `zone_N_max_daily_volume` | 0–200 | 200 | L | Hard daily water cap for the zone (emergency rescue is exempt). |
+| `zone_N_max_daily_volume` | 0–200 | 200 | L | Daily water budget for the zone. Top-ups and EC-correction shots stop at it, and a shot that would cross it gets only what is left; rescues (watchdog, P3 emergency, high-EC flushes) and the P1 ramp are exempt. |
 | `zone_N_shot_size_multiplier` | 0.1–5 | 1.0 | × | Scales every shot for this zone (a weak/strong row trim). |
 
 ---
@@ -195,7 +195,7 @@ match the globals above.
 | `zone_N_ec` | mS/cm | Fused pore-water EC. |
 | `zone_N_phase` | — | The zone's current phase (P0–P3). |
 | `zone_N_auto_setpoints` | — | Published by the controller: `off` / `learning` / `tracking` / `frozen`. Attributes: `learned_peak`, `gain`, `day_rate`, `night_rate`, `p1_outcome` (`pending` / `reached` / `short` / `plateau` / `suspect`), `hold_days`, `frozen_reason`, `last_change`, `jev` (`disabled` / `ok` / `unavailable`), `jev_last` (the judge's latest hourly P2 answer), `jev_changed_today`, `working_peak_adjust`, `managed` (the number entities it may rewrite; includes `p2_shot_size` while the judge is configured). |
-| `zone_N_status` | — | `Optimal` / `Dry - Needs Water` / `Saturated` / `Disabled` / `Sensor Error`; `Room off` while the room is switched off. |
+| `zone_N_status` / `_status_app` | — | The controller's label for the zone, published on `zone_N_status_app` with a `reason` attribute and shown by `zone_N_status`, its only writer: `Drying back` / `Ramping` / `Optimal` / `Overnight dryback` (P0-P3, holding), `Flushing` / `Refilling` / `Topping up` / `Emergency` (watering), `Blocked: <why>`, `Blocked — EC/cap`, `Probe dead — copying`, `Room off`. `Controller not reporting` when the controller has not reported for 10 minutes. |
 | `zone_N_safety_status` | — | `safe` / fault. |
 | `zone_N_health_score` / `zone_N_efficiency` | — | Per-zone health/efficiency. |
 | `zone_N_daily_water_usage` / `_daily_water_app` | L | Water today (resets at lights-on). |
@@ -209,13 +209,14 @@ match the globals above.
 
 ---
 
-## 7. Hardware (your own switches/sensors — mapped via the add-on `hardware` option, not created here)
+## 7. Hardware (your own switches/sensors — mapped in Rooms & setup, not created here)
 
 The pump, mainline solenoid, per-zone valve switches, and the raw VWC/EC + source-water
-sensors are **your** existing HA entities. You map them to the engine via the f2-control
-add-on's `hardware` Configuration option (`pump` / `mainline` / per-zone `valves`), which
-defaults to the F2 entities (`switch.veg_main_pump`, `switch.espoe_irrigation_relay_2_3`,
-`switch.f2_row1`–`f2_row3`); the engine drives those switches and reads the sensors.
+sensors are **your** existing HA entities. Map them in the Crop Steering sidebar under
+**Rooms & setup**: the controller drives what the room's setup maps, and with nothing mapped
+it holds every zone and says so. (The controller also reads a `hardware` map from its options
+file, for tests and hand-built development setups only: the app's Configuration tab doesn't
+offer it, and Supervisor rejects it as an unknown option.)
 
 > **Inert legacy entities:** the integration may still create a steering-intent slider
 > and a few `…_intelligence_*_enabled` switches from a retired experimental layer. The

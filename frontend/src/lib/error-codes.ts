@@ -30,9 +30,12 @@ export const severityLabel: Record<Severity, string> = {
   info: "Information",
 };
 
-/** "CS-101", "cs101", "101" all name one code; anything else is not a code. */
+/** "CS-101", "cs101", "101" all name one code, and so does a line pasted from a notification or a
+ * Repairs card ("Zone 2: moisture reading hasn't changed (CS-101)", "Code CS-101."): the last code
+ * in it, because every printed title and message ends with its own code while its words may name
+ * another ("latches a hardware hold (CS-301)"). Anything else is not a code. */
 export function asCode(query: string): string | null {
-  const match = /^(?:cs-?)?(\d{3})$/i.exec(query.trim());
+  const match = [...query.matchAll(/\bcs-?(\d{3})\b/gi)].pop() ?? /^\s*(\d{3})\s*$/.exec(query);
   return match ? `CS-${match[1]}` : null;
 }
 

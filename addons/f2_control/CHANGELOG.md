@@ -1,42 +1,37 @@
-# 0.17.3
+# 2.21.0
 
-Pair with integration 2.20.4. **C3** by the rule; notification text and the served dashboard only. Not run on hardware before release.
+Pair with integration 2.21.0, one number for both halves from this release on. **C3.** Owner-approved rehearsal release without a staging soak (25 Sep 2026); not run on hardware before release. No change to add-on options or the state file.
 
-- **Every notification ends with an error code** (CS-101 to CS-501) and says where to look it up; the log line carries it too. The list, with causes and fixes, is `docs/ERROR_CODES.md` and the dashboard's *Help & tools > Error codes*.
-- **Titles name the room and zone the operator's way**: "Tent · GT4 (Z2): …". The room name comes from the descriptor's `room_name`; one unnamed room shows none, and "default" is never shown for the only room.
-- **A zone without a usable moisture reading says why**: CS-101 unchanged for 20+ minutes (with the value and for how long; normal with no plant in the cube), CS-102 not reporting, CS-103 out of range. Copying a healthy zone, or the blind timer, is unchanged.
-- Every message rewritten in plain words, entity ids on a last "Sensor:" / "Detail:" line. The watchdog no longer prints "no water 16666666.7h" for a zone never watered.
-- Notification ids unchanged: an update replaces old cards instead of adding new ones.
-- The dashboard served by the app is the 2.20.4 build (*Help & tools > Error codes*).
-- No change to add-on options, to the state file, or to what is watered and when.
+- **C3. A shot interrupted by a Home Assistant restart is closed, not left running.** After a restart (or a switch reconnecting) Home Assistant reports every switch as changed at that moment, so `_inflight_plan` took the interrupted shot's own open valve for a person's and left it on without an alert. When `last_changed` falls outside `INFLIGHT_OPEN_WINDOW_S`, the new `ha_history()` + `_on_since_shot()` read the recorder: ON since the shot opened it, with only `unavailable`/`unknown` between, is the shot's and is closed; an OFF since, or ON before the shot, is a person's; no history is `unsure` (CS-309, retried every loop). Not run on hardware. No change to options or the state file.
+- **C1, dashboard only.** The dashboard the app serves (`www/public/dashboard.html`) is rebuilt with the Overview's grow-day timeline and the dashboard changes in the integration's changelog (the Overview's layout and a calmer look on every page). No change to options, the state file or irrigation.
+- **C3. A shot that something else cuts short ends there, and only its water is counted.** 23 Sep, 11:25: the batch tank ran empty 4 s into a 170 s shot, the dosing hold came on and a guard closed the feed path, and the controller waited out and counted all 170 s. `_wait_shot` now also ends a shot when a `hold_entities` entity reads ON or the shot's own valve reads OFF after being seen ON, with the same bounded reads and ≤2 s cadence; the kill switch, room switch and override are read first and still win. `_close_cut_short` switches off the shot's valve and main line unless they read OFF, and its pump unless it reads OFF or a hold is ON. It reads back only what it switched off, clears `shot_inflight` as a normal close does, and never latches a hardware hold for a feed path somebody else closed. Counted time: the valve's `last_changed` when it falls inside the shot, else when the interruption was seen; the shot counts as a kill-switch abort does. One debounced alert names the entity and the seconds delivered against planned. Not run on hardware. No change to options or the state file.
 
-# 0.17.2
+# 0.16.5
 
-Pair with integration 2.20.3. **C3** by the rule; notifications and the served dashboard only. Not run on hardware before release.
+Pair with integration 2.19.5. **C3.** Owner-approved rehearsal release without a staging soak (23 Sep 2026); not run on hardware before release. No change to add-on options or the state file.
 
-- **Notifications name the zone the operator's way**: "GT4 (Z2)" / "GT4 (zone 2)", from the descriptor's `zone_names`, read on every rediscovery (a rename needs no restart and no disarm cycle). Notification ids, entity ids and log lines keep the number. No names, default names or malformed names read as before.
-- **No "lights now read from the integration" alert on a wizard-made room whose lights option is still the shipped 10-22.** A room on the legacy kill-switch helper, or any room whose option was changed, is still told. Which hours are used is unchanged.
-- **"F2 config clamp" is now "Crop Steering setting outside the engine's range"**, and says the engine runs on the limited value and how to clear it. Same notification id.
-- The dashboard served by the app is the 2.20.3 build (dropdown lists readable on a dark theme).
-- No change to add-on options, to the state file, or to what is watered and when.
+- **A held grow plan never stops an emergency, watchdog or minimum-daily shot.** Each zone the plan holds is decided with the engine's new `ZoneSnapshot.steering_held`, so `decide()` returns the rescue behind a routine shot; `_blocked` and the shot preflight let `PLAN_HOLD_EXEMPT` kinds (`p3_emergency`, `watchdog`, `min_daily`, and for a blind zone `blind_fallback` and `blind_copy_rescue`) through the plan hold, and every other gate still applies. A held zone that is not firing shows the hold as its block. No change to options or the state file. Pairs with the integration's plan fixes in the same release (a plan no longer holds a room all day over a missed lights-on).
+- **Zone status has one writer.** The controller publishes each zone's label, with its reason, on `sensor.crop_steering_<prefix>zone_N_status_app` (`Room off` included) and no longer writes `zone_N_status`, which the integration now mirrors from it. With an older integration, `zone_N_status` shows that integration's fixed-threshold label until it is updated. No change to options, the state file or irrigation.
 
-# 0.17.1
+# 0.16.4
 
-Pair with integration 2.20.2. **C3.** Two upgrade fixes written upstream (`5125bab`), found by upstream's final review of 0.16.2's changes. **This fork's 0.16.2 and 0.17.0 do not have them.** Not run on hardware on this fork before release.
+Pair with integration 2.19.4. **C1.** No controller code change: the dashboard served by the app is the 2.19.4 build (controller-health status line, live updates instead of polling). No change to options, the state file or irrigation.
 
-- **The room's record decides its zones.** Since 0.16.2 a controller that started before Home Assistant was ready re-resolved its stand-in zone list every loop, and took the first fused-sensor count it saw as final. Sensors can appear a few at a time while Home Assistant starts, so a three-zone room could be settled as one zone until the controller restarted. A room with a numbered setup (`setup_revision` >= 1) got its zones back when that setup was adopted; **a revision-zero room did not**. 0.16.1 and older never re-resolved, so they were not affected. Now the descriptor's `active_zone_ids` / `num_zones` come first; sensors without a descriptor are provisional and re-resolved every loop, unless `hardware` is hand-mapped in the options. The sensor of a retired zone no longer adds a zone.
-- **An old state file keeps the meaning of its timestamps, and always loads.** 0.16.2 guessed, for a file saved without `last_shot_is_anchor`, that no recorded water meant "switched on, never watered". Daily counters reset at lights-on and water history expires, so that hid genuine irrigation times after an update; and its raw comparisons raised on a numeric string or a malformed `water_history_legacy_excluded_l`, which stopped the controller starting. The guess is removed: a zone saved without the flag loads with `False`.
-- The cost: a box updated straight from 0.16.1 or older, switched on and never watered, shows the switch-on as its last irrigation again until the first real one. A file saved by 0.16.2 or 0.17.0 carries the explicit flag and is unaffected.
-- No change to add-on options, to the state file's keys, or to setup adoption: a restart resumes without a disarm cycle.
+# 0.16.3
 
-# 0.17.0
+Pair with integration 2.19.3. **C3.** Owner-approved rehearsal release without a staging soak (23 Sep 2026); not run on hardware before release. No change to add-on options.
 
-Pair with integration 2.20.1. **C3.** Found on the first real install; the fix itself was not run on hardware before release.
+- **A room deleted and set up again is adopted afresh** (#50): the descriptor's `entry_id` changing re-opens adoption through the usual gate (kill switch and hardware OFF); first sight changes nothing, so a running room resumes without a disarm cycle.
+- Installed only from `JakeTheRabbit/HA-Irrigation-Strategy`; the `f2-control` mirror is retired. `url` in `config.yaml` now points here. No change to options, the state file or irrigation.
 
-- **A room that is deleted in Home Assistant and set up again is a new room.** The controller keeps running across a re-setup, and used to go on driving the room that no longer existed: a re-created room's setup revision starts again at 1, and any revision not higher than the one held was skipped. With a different valve in the new room, arming it would have watered through the old one. The integration (2.20.1) now publishes which room it is (`entry_id` in the descriptor); when that changes, the setup is adopted afresh through the usual gate: the kill switches and the hardware of **both** maps must read OFF, otherwise every zone is held with *setup needs re-arming*.
-- A different room is never *resumed* after a restart, however alike it looks: it was born with its kill switch OFF, so finding it ON is a setup to gate.
-- **Existing rooms: no change, and no disarm cycle after the update.** An integration that does not say which room it is (everything before 2.20.1) is handled exactly as before. The first `entry_id` the controller ever sees is remembered and written down, and changes nothing. A restart on a state file from 0.16.x resumes with the kill switch left ON.
-- State file: `_setup` gains an optional `entry_id`. No change to add-on options. No change to what a working install waters, or when.
+- **The daily limit is a budget with typed exemptions.** The watchdog, P3 emergency and high-EC flushes (anti-lockout, P2 rescue) pass it, and so does the P1 ramp, which always runs in full. Top-ups, P1/P2/P0 EC-correction shots and the min-daily floor stop at it. A shot that would cross it is cut to what is left (under 5 s: held, `BLOCK daily-cap (x L left)`). The "flush" in a reason's text no longer makes a shot exempt.
+- **A zone over budget and starving gets the watchdog shot** instead of nothing (22 Sep: Z1 dry 14:06-22:00). No watchdog in P0: the night no longer counts as "no water" at lights-on.
+- **P1 at its ceiling, held open only by pore EC, completes once the budget is spent.**
+- **Pore EC is settled EC.** Every EC rule uses the last reading taken 45 minutes after a shot, held in between; EC corrections wait for the next settled reading. Only settled readings feed the EC offset step / PID. Published as `ec_settled` on each zone's safety status.
+- **A new grow-day resets a zone found in P1/P2** (the controller was not running across lights-off), and yesterday's EC offset is cleared before the first tick of the day.
+- **Interrupted shots.** Each shot writes down what it will open before opening it; the next loop closes exactly that, only while the room's kill switch is ON and only switches ON continuously since the shot opened them. Anything a person has switched since (hand-watering, tank circulation), everything upstream of it, the main line and pump while another valve on the line is open, and the pump while a hold is on, are left alone. Nothing is switched off on a timer.
+- **Stopping the app closes only what is in flight.** SIGTERM (stop, update, restart) used to switch off every mapped pump and valve; it now closes only the shot running, by the same rules, and counts its water. With no shot running it switches nothing off, so tank circulation and hand-watering carry on through an update. The error-cleanup read-back is as patient as the normal one (no false hold from a late Zigbee OFF report); alerts are only silenced once Home Assistant has them, and a hardware hold latched while it was unreachable is announced once it is back.
+- State file: additive `_shot_inflight` (room block), `ec_settled` / `ec_settled_at` (zone). An old file loads; the 0.16.2 controller loads the new one.
 
 # 0.16.2
 
@@ -45,7 +40,6 @@ Pair with integration 2.19.2. **C3.** Found on the first real install (a one-zon
 - **Zones are never invented.** Started before the integration was set up, the controller fell back to the shipped `num_zones: 3` and reported zones 2 and 3 of a one-zone tent as "no hardware mapped". It now has no zones until a room exists, checks every loop, and picks the room up by itself: no restart needed. The log says so: *"the Crop Steering integration has not published a room yet..."*. `num_zones` is still the fallback when Home Assistant cannot be reached at start, and a hand-mapped `hardware` option still keeps its zone count. A state file that already holds the phantom zones loads as before.
 - **Switch-on is no longer an irrigation event.** New switch-on timestamps are explicitly marked by `last_shot_is_anchor` and published as `unknown` until an irrigation is recorded, also for a room that is off. An old file without the flag keeps its timestamp: zero daily counters or missing history cannot establish whether an old timestamp was switch-on or irrigation. Electrical operation alone does not prove water delivery.
 - Final review fixes keep the descriptor's complete zone list when HA sensors appear gradually, preserve old irrigation timestamps after daily rollover, and keep legacy numeric-string/malformed excluded-volume state loadable. Regression tests cover each case.
-- *On this fork* those final review fixes are **not in 0.16.2 or 0.17.0**; they shipped in 0.17.1. The wording of this entry is upstream's, whose 0.16.2 has them.
 - The dashboard served by the app is the 2.19.2 build (the side menu scrolls on small screens).
 - No change to add-on options. No change to what a working install waters, or when.
 

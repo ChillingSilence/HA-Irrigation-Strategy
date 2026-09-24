@@ -16,6 +16,7 @@ import {
   asCode,
   codeFromHash,
   errorCodeGroups,
+  errorCodes,
   findErrorCodes,
   severityLabel,
 } from "@/lib/error-codes";
@@ -69,10 +70,7 @@ const glossary = [
 export function Help({ controller }: { controller: Controller }) {
   return (
     <>
-      <Heading
-        title="Help & tools"
-        description="A practical guide to the complete Crop Steering workspace."
-      />
+      <Heading title="Help & tools" />
       <div className="help-intro">
         <BookOpen size={28} />
         <div>
@@ -82,6 +80,18 @@ export function Help({ controller }: { controller: Controller }) {
             then review the daily or weekly grow plan. Live targets and manual fallback values are
             kept distinct.
           </p>
+          <h3 id="daily-routine">Daily routine</h3>
+          <ol className="daily-routine">
+            <li>
+              <a href="#/overview">Check the room’s readings and alerts on the Overview</a>
+            </li>
+            <li>
+              <a href="#/zones">Inspect any zone that needs attention</a>
+            </li>
+            <li>
+              <a href="#/strategy">Review irrigation changes before applying them</a>
+            </li>
+          </ol>
         </div>
       </div>
       <div className="help-columns">
@@ -215,8 +225,9 @@ function ErrorCodes() {
         <div>
           <h2 id="error-codes-title">Error codes</h2>
           <p>
-            Every Crop Steering notification and Repairs card ends with a code such as CS-101. Look
-            it up here for what it means, what happens to watering meanwhile, and what to do.
+            Every Crop Steering alert and Repairs card ends with a code such as CS-101 (the
+            controller's regular status summary has none). Look it up here for what it means, what
+            happens to watering meanwhile, and what to do.
           </p>
         </div>
       </div>
@@ -232,7 +243,8 @@ function ErrorCodes() {
         </div>
         {found.length === 0 && (
           <p className="error-codes-empty">
-            No code matches “{query.trim()}”. Codes run from CS-101 to CS-605.
+            No code matches “{query.trim()}”. Codes run from {errorCodes[0].code} to{" "}
+            {errorCodes[errorCodes.length - 1].code}.
           </p>
         )}
         {errorCodeGroups.map((group) => {
@@ -243,6 +255,7 @@ function ErrorCodes() {
               <h3>
                 {group.name} <span>{group.prefix}xx</span>
               </h3>
+              <p>{group.detail}</p>
               {codes.map((entry) => (
                 <details
                   className="error-code"

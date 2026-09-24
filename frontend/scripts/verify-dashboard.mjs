@@ -134,7 +134,7 @@ try {
     assert.equal(await page.locator("#desktop-room").inputValue(), "room:f1_");
   });
   const routes = [
-    ["overview", "Room overview"],
+    ["overview", "Flower 2 overview"],
     ["zones", "Zones"],
     ["strategy", "Today’s targets"],
     ["grow-plan", "Scheduled targets"],
@@ -150,6 +150,13 @@ try {
     await check(`${route}: render, desktop layout and accessibility`, async () => {
       await go(route);
       await expectVisible(page.getByRole("heading", { name: heading, exact: true }));
+      // A heading carries a sentence only for a behaviour someone could get wrong.
+      if (!["strategy", "grow-plan"].includes(route))
+        assert.equal(
+          await page.locator(".page-heading > div > p").count(),
+          0,
+          `${route}: the heading repeats itself in a description`,
+        );
       if (["strategy", "grow-plan"].includes(route)) await planViewsShareRow();
       await noOverflow();
       await axe(route);
@@ -158,6 +165,99 @@ try {
         fullPage: true,
       });
     });
+  await check("help: the daily routine replaces the Overview's workflow card", async () => {
+    await go("help");
+    const routine = page.locator("ol.daily-routine");
+    await expectVisible(routine);
+    assert.deepEqual(
+      await routine.locator("a").evaluateAll((links) => links.map((a) => a.getAttribute("href"))),
+      ["#/overview", "#/zones", "#/strategy"],
+    );
+    await go("overview");
+    assert.equal(await page.getByRole("heading", { name: "Your daily workflow" }).count(), 0);
+  });
+  await check("recent activity opens beside any page and leads to the full log", async () => {
+    await go("zones");
+    assert.equal(await page.getByRole("dialog").count(), 0, "the panel starts closed");
+    await page.getByRole("button", { name: "Recent activity", exact: true }).click();
+    const panel = page.getByRole("dialog", { name: "Recent activity" });
+    await expectVisible(panel);
+    assert.ok((await panel.locator(".event-row").count()) > 0, "the demo room has records");
+    await axe("recent activity panel");
+    await page.screenshot({ path: path.join(out, "dashboard-activity-panel.png") });
+    // Closing hands focus back to the button that opened it.
+    await page.keyboard.press("Escape");
+    await panel.waitFor({ state: "hidden" });
+    // Radix restores focus as the panel unmounts, a moment after it is hidden: wait, don't sample.
+    await page
+      .waitForFunction(
+        () => document.activeElement?.getAttribute("aria-label") === "Recent activity",
+        null,
+        { timeout: 5_000 },
+      )
+      .catch(() => {
+        throw new Error("focus did not return to the Recent activity button");
+      });
+    await page.getByRole("button", { name: "Recent activity", exact: true }).click();
+    await expectVisible(panel);
+    await panel.getByRole("button", { name: "Open the activity log" }).click();
+    await expectVisible(page.getByRole("heading", { name: "Activity", exact: true }));
+    assert.equal(await page.getByRole("dialog").count(), 0, "the panel closes when the log opens");
+    await go("overview");
+    assert.equal(await page.getByRole("heading", { name: "Recent activity" }).count(), 0);
+  });
+  await check("overview: the grow day comes first, above the tank", async () => {
+    await go("overview");
+    const timeline = page.locator("[data-day-timeline]");
+    await expectVisible(timeline.locator(".timeline-zone").first());
+    const tops = await page.evaluate(() =>
+      ["[data-day-timeline]", "[data-tank-status]", ".zone-table-desktop"].map(
+        (selector) => document.querySelector(selector).getBoundingClientRect().top,
+      ),
+    );
+    assert.ok(tops[0] < tops[1] && tops[0] < tops[2], `timeline ${tops[0]}, tank ${tops[1]}`);
+    assert.equal(await page.locator(".wd-daily").count(), 0, "no water table on the Overview");
+    assert.equal(await page.getByText("Controller scheduling", { exact: true }).count(), 0);
+  });
+  await check("overview: two screens at most, zones beside the tank", async () => {
+    // 1440×800 ≈ the browser window of a 1440×900 laptop; the Overview was 3.2 screens tall.
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await go("overview");
+    await expectVisible(page.getByRole("heading", { name: "Flower 2 overview", exact: true }));
+    const layout = await page.evaluate(() => {
+      const top = (selector) => document.querySelector(selector).getBoundingClientRect().top;
+      const table = document.querySelector(".zone-table-desktop");
+      return {
+        height: document.documentElement.scrollHeight,
+        window: innerHeight,
+        zonesTop: top(".overview-grid > .panel"),
+        tankTop: top("[data-tank-status]"),
+        tableScrolls: table.scrollWidth > table.clientWidth + 1,
+        subtitles: document.querySelectorAll("#main-content .panel-heading p").length,
+      };
+    });
+    assert.ok(
+      layout.height <= 2 * layout.window,
+      `Overview is ${layout.height}px tall in a ${layout.window}px window`,
+    );
+    assert.equal(layout.zonesTop, layout.tankTop, "zones and tank share a row");
+    assert.equal(layout.tableScrolls, false, "the zone table scrolls sideways");
+    assert.equal(layout.subtitles, 0, "a panel on the Overview repeats its title in a subtitle");
+    await page.screenshot({
+      path: path.join(out, "dashboard-overview-laptop.png"),
+      fullPage: true,
+    });
+    // A narrow desktop stacks the columns without sideways page scroll.
+    await page.setViewportSize({ width: 1100, height: 800 });
+    await noOverflow();
+    const stacked = await page.evaluate(() => {
+      const zones = document.querySelector(".overview-grid > .panel").getBoundingClientRect();
+      const tank = document.querySelector("[data-tank-status]").getBoundingClientRect();
+      return tank.top >= zones.bottom;
+    });
+    assert.ok(stacked, "below 1200 px the tank stacks under the zones");
+    await page.setViewportSize({ width: 1440, height: 1000 });
+  });
   await check("help: every error code is listed, searchable and linkable", async () => {
     const catalog = JSON.parse(await readFile(path.join(root, "docs/error-codes.json"), "utf8"));
     await go("help");
@@ -189,6 +289,10 @@ try {
     // Dark: only the new section. Toggling the class alone is not the app's full dark theme, so
     // the rest of the page is not judged on it here.
     await page.evaluate(() => document.documentElement.classList.add("dark"));
+    // Colours transition (even at reduced motion); measure after two frames, not mid-change.
+    await page.evaluate(
+      () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+    );
     const dark = await new AxeBuilder({ page })
       .include(".error-codes")
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
