@@ -54,7 +54,7 @@ hardware.** Restart Home Assistant after the HACS update.
   unchanged** (`f2_{key}`), so an update replaces an old card instead of adding a second one.
 - **Integration** (**C1**, translations only). Repairs titles end `(CS-60x)` and descriptions say
   where to look the code up. Issue ids and translation keys are unchanged.
-- **The list.** `docs/error-codes.json` (26 codes: meaning, watering meanwhile, causes, fixes,
+- **The list.** `docs/error-codes.json` (28 codes: meaning, watering meanwhile, causes, fixes,
   severity, where it shows) is written out as `docs/ERROR_CODES.md` by
   `scripts/render_error_codes.py`, and the dashboard imports the same file.
   `tests/test_error_codes.py` fails on a code that is raised but not listed, a listed code nothing
