@@ -28,8 +28,8 @@ def test_a_named_zone_is_named_and_its_number_is_still_there():
     states[DESCRIPTOR][1]["zone_names"] = {"1": "GT1", "2": "GT4"}
     _c, alerts, _fake = _dead_probe_alerts(states)
     title = alerts["f2_blind_default_z2"]["title"]
-    assert "GT4 (Z2)" in title and "probe dead" in title
-    assert "GT1 (Z1)" in alerts["f2_blind_default_z1"]["title"]
+    assert title == "GT4 (Z2): moisture sensor not reporting (CS-102)"
+    assert alerts["f2_blind_default_z1"]["title"].startswith("GT1 (Z1): ")
 
 
 def test_ids_entities_and_log_lines_keep_the_number():
@@ -52,7 +52,7 @@ def test_a_rename_in_configure_reaches_the_next_notification_without_a_new_setup
     assert c.rooms[0].zone_names == {1: "Bench A", 2: "Bench B"}
 
 
-def test_an_install_without_names_reads_exactly_as_before():
+def test_an_install_without_names_gets_the_zone_number():
     """UPGRADE IN PLACE: an older integration publishes no zone_names, a newer one publishes
     "Zone N" for a zone nobody named, and either may hold rubbish."""
     for names in (None, {"1": "Zone 1", "2": "Zone 2"}, "rubbish", {"x": "A", "2": 7, "1": "  "}):
@@ -62,4 +62,4 @@ def test_an_install_without_names_reads_exactly_as_before():
         else:
             states[DESCRIPTOR][1]["zone_names"] = names
         _c, alerts, _fake = _dead_probe_alerts(states)
-        assert alerts["f2_blind_default_z2"]["title"] == "⚠️ default Z2 probe dead — blind schedule", names
+        assert alerts["f2_blind_default_z2"]["title"] == "Zone 2: moisture sensor not reporting (CS-102)", names

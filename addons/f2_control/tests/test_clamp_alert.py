@@ -28,7 +28,7 @@ def test_a_value_the_engine_limits_is_reported_in_words_anyone_can_act_on():
     (alert,) = _loop(states)
     assert "F2" not in alert["title"] and "range" in alert["title"]
     assert "field_capacity=95" in alert["message"] and "90" in alert["message"]
-    assert "limited value" in alert["message"]
+    assert "nearest allowed value" in alert["message"] and alert["title"].endswith("(CS-401)")
     assert alert["notification_id"] == "f2_cfg_default_z1_field_capacity"  # same id: it replaces the old card
 
 
@@ -44,5 +44,5 @@ def test_the_alert_names_the_zone_the_way_every_other_notification_does():
     states[DESCRIPTOR][1]["zone_names"] = {"1": "GT1"}
     states["number.crop_steering_zone_1_field_capacity"] = ("95", {})
     (alert,) = _loop(states)
-    assert alert["message"].startswith("default GT1 (zone 1): field_capacity=95")
+    assert alert["title"].startswith("GT1 (Z1): ") and "default" not in alert["title"]
     assert alert["notification_id"] == "f2_cfg_default_z1_field_capacity"

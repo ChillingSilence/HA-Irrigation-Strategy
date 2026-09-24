@@ -33,8 +33,9 @@ async def test_fresh_install_a_zone_named_in_the_wizard_is_named_in_its_alert(
     c, fake, _clock = controller_for({"enable_flag": KILL})
     assert c.rooms[0].zone_names == {1: "GT1"}
     c.loop_once(NOW)  # a bare install: never watered, so the watchdog speaks
-    assert any("default GT1 (zone 1):" in text for text in _texts(fake)), _texts(fake)
-    assert not any("default zone 1:" in text for text in _texts(fake))
+    # The wizard's first question named the room "Tent": that, not the internal "default".
+    assert any(text.startswith("Tent · GT1 (Z1): ") for text in _texts(fake)), _texts(fake)
+    assert not any("default" in text.split(" | ")[0] for text in _texts(fake)), _texts(fake)
 
     # Renamed in Configure: the running controller follows, with no restart and no disarm cycle.
     await _save_map(hass, entry, zone_1_name="Bench A")
@@ -47,7 +48,11 @@ async def test_fresh_install_a_zone_named_in_the_wizard_is_named_in_its_alert(
 async def test_upgrade_in_place_old_installs_get_their_names_or_the_number(
     hass, controller_for
 ):
-    for name in ("entry_2_17_wizard.json", "entry_2_18_one_switch_tent.json"):
+    for name, room in (
+        ("entry_2_17_wizard.json", "Flower room"),
+        ("entry_2_18_one_switch_tent.json", "Tent"),
+        ("entry_env_era.json", ""),  # no room_name stored: no room shown, never "default"
+    ):
         _entry, seed = await _upgrade(hass, name)
         c, _fake, _clock = controller_for({"enable_flag": KILL})
         expected = {
@@ -56,6 +61,7 @@ async def test_upgrade_in_place_old_installs_get_their_names_or_the_number(
             if zone.get("name") and zone["name"] != f"Zone {number}"
         }
         assert c.rooms[0].zone_names == expected, name
+        assert c.rooms[0].room_name == room, name
         for entry in hass.config_entries.async_entries("crop_steering"):
             assert await hass.config_entries.async_remove(entry.entry_id)
         await hass.async_block_till_done()
