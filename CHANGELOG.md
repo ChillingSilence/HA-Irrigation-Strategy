@@ -9,6 +9,68 @@ notes**, the entity- and code-level detail for developers and AI agents working 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.20.4] - 2026-09-24
+
+Pair: **controller 0.17.3**. Class **C3** by the rule (it touches the controller). **One change**,
+#38, built in four layers: every notification and Repairs card gets an error code, the codes are
+explained in the docs and in the dashboard, and the notifications are reworded. It changes what
+the notifications say, not what is watered or when. **Nothing in this release has run on
+hardware.** Restart Home Assistant after the HACS update.
+
+### 🌱 In plain English
+
+- **Every notification has an error code, and every code is explained.** Each notification from
+  the controller app, and each Crop Steering card in Settings > Repairs, now ends with a code such
+  as CS-101. Look it up in [Error codes](docs/ERROR_CODES.md), or in the dashboard under
+  *Help & tools > Error codes* (type "101", or a word such as "probe"): what it means, whether the
+  plants are still being watered meanwhile, the likely causes, and what to do.
+- **Notifications name your room and zone the way you did.** "Tent · GT4 (Z2)", not "default Z2".
+  "default" was the controller's internal name for the first room. A single room left with the
+  wizard's own default name shows no room name at all.
+- **A probe whose reading has stopped moving is no longer called dead.** On the first real
+  install a probe in a cube with no plant was reported as "probe dead — blind schedule". The
+  notification now says which of three things it is: the reading hasn't changed (CS-101, normal
+  with no plant in the cube), the sensor isn't reporting (CS-102), or the reading is impossible
+  (CS-103), with the value, for how long, and advice that fits. What the controller does meanwhile
+  is unchanged.
+- **Plain words throughout.** Every notification is rewritten; entity ids moved to a last
+  "Sensor:" or "Detail:" line. The starving-zone warning no longer says "no water 16666666.7h"
+  for a zone the controller has never watered.
+- **An empty room can simply be switched off.** With *Room Active* off, the controller leaves the
+  room alone: no watering and no notifications. Not new, but the moisture notification now says so.
+
+### 🔧 Technical notes
+
+- **Controller** (**C3**). `_alert(key, code, title, message, room=None, zone=None)`: the title
+  reads `<where>: <title> (<code>)` and the message ends `Code <code>. What it means and what to
+  do: Crop Steering → Help & tools → Error codes.`; the log line carries the title. `_where()` is
+  the descriptor's `room_name` (read on every rediscovery, display only; blank, "default",
+  "Crop Steering", "Crop Steering System" and non-strings count as unnamed) plus `_zone_title()`
+  ("GT4 (Z2)" or "Zone 2"); one unnamed room shows none, two or more fall back to the slug.
+  `_unreadable()` re-reads the fused moisture sensor only when a reminder is due and returns
+  CS-101 (`last_updated` older than 20 minutes), CS-102 (missing, unavailable, unknown,
+  non-numeric, or no valid timestamp) or CS-103 (outside 0-100). The daily-cap and high-EC holds
+  are told apart as CS-205 and CS-206. `_zone_label()` is gone. **Notification ids are
+  unchanged** (`f2_{key}`), so an update replaces an old card instead of adding a second one.
+- **Integration** (**C1**, translations only). Repairs titles end `(CS-60x)` and descriptions say
+  where to look the code up. Issue ids and translation keys are unchanged.
+- **The list.** `docs/error-codes.json` (26 codes: meaning, watering meanwhile, causes, fixes,
+  severity, where it shows) is written out as `docs/ERROR_CODES.md` by
+  `scripts/render_error_codes.py`, and the dashboard imports the same file.
+  `tests/test_error_codes.py` fails on a code that is raised but not listed, a listed code nothing
+  raises, a Repairs card without its code, or a stale page; `tests_ha/test_error_codes.py` checks
+  the card text a real Home Assistant resolves.
+- **Dashboard** (**C1**). *Help & tools > Error codes*: search by code in any form (CS-101,
+  cs101, 101) or by words; `#/help?code=CS-101` opens one. Browser check: exactly the listed
+  codes, search, the link, no overflow, axe clean with every entry open and on a dark theme. The
+  three bundles are rebuilt from source.
+- **Upgrade in place.** No entity, option, descriptor or state-file change, and notification ids
+  are unchanged. The seeded 2.17, 2.18 and env-era installs get their stored room name ("Flower
+  room", "Tent", none), and descriptors without names read "Zone N" (tested in a real Home
+  Assistant). Fresh install: a room named in the wizard titles its alerts with that name, and its
+  first Repairs card reads "Crop Steering: engine not running (CS-602)". An automation that matched
+  on the old notification wording must be updated; nothing in this repository did.
+
 ## [2.20.3] - 2026-09-22
 
 Pair: **controller 0.17.2**. Class **C3** by the rule (four of the six changes touch the

@@ -1,3 +1,15 @@
+# 0.17.3
+
+Pair with integration 2.20.4. **C3** by the rule; notification text and the served dashboard only. Not run on hardware before release.
+
+- **Every notification ends with an error code** (CS-101 to CS-501) and says where to look it up; the log line carries it too. The list, with causes and fixes, is `docs/ERROR_CODES.md` and the dashboard's *Help & tools > Error codes*.
+- **Titles name the room and zone the operator's way**: "Tent · GT4 (Z2): …". The room name comes from the descriptor's `room_name`; one unnamed room shows none, and "default" is never shown for the only room.
+- **A zone without a usable moisture reading says why**: CS-101 unchanged for 20+ minutes (with the value and for how long; normal with no plant in the cube), CS-102 not reporting, CS-103 out of range. Copying a healthy zone, or the blind timer, is unchanged.
+- Every message rewritten in plain words, entity ids on a last "Sensor:" / "Detail:" line. The watchdog no longer prints "no water 16666666.7h" for a zone never watered.
+- Notification ids unchanged: an update replaces old cards instead of adding new ones.
+- The dashboard served by the app is the 2.20.4 build (*Help & tools > Error codes*).
+- No change to add-on options, to the state file, or to what is watered and when.
+
 # 0.17.2
 
 Pair with integration 2.20.3. **C3** by the rule; notifications and the served dashboard only. Not run on hardware before release.
