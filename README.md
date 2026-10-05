@@ -70,6 +70,10 @@ Crop Steering comes in two parts, and watering needs both: the **integration** k
 
 Report a problem or ask a question in [GitHub issues](https://github.com/Chill-Division/HA-Irrigation-Strategy/issues). Include the error code if there is one, both version numbers (shown in the Crop Steering sidebar), and what the controller app's log says.
 
+## Credits
+
+Crop Steering began as [JakeTheRabbit's HA-Irrigation-Strategy](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy), and this project carries it on.
+
 ## License
 
-[MIT](https://github.com/Chill-Division/HA-Irrigation-Strategy/blob/main/LICENSE)
+[MIT](https://github.com/Chill-Division/HA-Irrigation-Strategy/blob/main/LICENSE), © 2026 JakeTheRabbit and Chill Division. The dashboard ships the licences of the open-source libraries it is built from, in `THIRD_PARTY_LICENSES.txt` beside it.

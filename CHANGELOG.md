@@ -9,6 +9,22 @@ and code-level detail for developers and AI agents working on the repo.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- **Credits and licences.** The README credits JakeTheRabbit's HA-Irrigation-Strategy, where Crop
+  Steering began, and the licence names Chill Division under him. Every part a box installs carries
+  the licence, and the dashboard ships its open-source libraries' licences beside it.
+
+### 🔧 Technical notes
+
+- Licence: `LICENSE` adds "Copyright (c) 2026 Chill Division" under JakeTheRabbit's line. Copies
+  ship in `custom_components/crop_steering/` (HACS installs only that folder, and the release zip
+  holds only it), `addons/f2_control/` (the Dockerfile copies it into the app's image) and
+  `crop-steering-engine/`. The dashboard build writes `THIRD_PARTY_LICENSES.txt`: every npm package
+  in the build's module graph, and Tailwind, sorted and undated (`frontend/vite.config.ts`).
+  `package.mjs` ships it beside both copies of the dashboard, and `tests/test_licence.py` holds
+  all of it.
+
 ## [1.0.0] - 2026-10-05
 
 Integration and controller **1.0.0**.

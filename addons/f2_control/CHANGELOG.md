@@ -1,3 +1,7 @@
+# Unreleased
+
+- **The app's image carries the MIT licence**, and **the dashboard the app serves** ships the licences of its open-source libraries beside it (`THIRD_PARTY_LICENSES.txt`). No change to the controller.
+
 # 1.0.0
 
 Pair with integration 1.0.0.
