@@ -9,13 +9,18 @@ and code-level detail for developers and AI agents working on the repo.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-10-05
+
+Integration and controller **1.0.0**.
 
 - **Version 1.0, for everyone.** The first release published at
   github.com/Chill-Division/HA-Irrigation-Strategy, where HACS and Settings → Apps install it from.
   The numbers start again: 1.0.0 follows 2.37.1. On a box already running 2.37, the Supervisor
   offers the controller app as usual, but HACS offers no lower number: redownload Crop Steering in
   HACS and pick 1.0.0. What's new then shows what's new in 1.0.
+- **Credits and licences.** The README credits JakeTheRabbit's HA-Irrigation-Strategy, where Crop
+  Steering began, and the licence names him and Chill Division. Every part a box installs carries
+  the licence, and the dashboard ships its open-source libraries' licences beside it.
 - **The README shows the public repository's pictures.** Its screenshots and its link to the rest
   come from github.com/Chill-Division/HA-Irrigation-Strategy, like its other links.
 - **Fresh screenshots.** The README and the screenshots page show this release, the new icon
@@ -33,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Technical notes
 
+- Licence: `LICENSE` names JakeTheRabbit and, under him, Chill Division. Copies ship in
+  `custom_components/crop_steering/` (HACS installs only that folder, and the release zip holds
+  only it), `addons/f2_control/` (the Dockerfile copies it into the app's image) and
+  `crop-steering-engine/`. The dashboard build writes `THIRD_PARTY_LICENSES.txt`: every npm package
+  in the build's module graph, and Tailwind, sorted and undated (`frontend/vite.config.ts`).
+  `package.mjs` ships it beside both copies of the dashboard, and `tests/test_licence.py` holds
+  all of it.
 - Docs: the README's six image addresses (raw.githubusercontent.com) and its screenshots link move
   from `ChillingSilence` to `Chill-Division`, where its other links already went. They stay
   absolute, so HACS, which shows the README, shows the pictures too (`docs/SCREENSHOTS.md`).
